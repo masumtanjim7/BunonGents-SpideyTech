@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/public/logo.jpg" alt="BUNON Gents logo" width="180" />
+  <img src="frontend/public/logo.png" alt="BUNON Gents logo" width="180" />
 
   # BUNON Gents
 
