@@ -566,8 +566,15 @@ export default function HomePage() {
                     alt={product.title}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
+                  {product.gallery && product.gallery.length > 0 && (
+                    <img
+                      src={product.gallery[0]}
+                      alt={`${product.title} alternate`}
+                      className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    />
+                  )}
                   {product.badge && (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#f4f3ee]/95 text-[#11241c] text-[9px] font-semibold uppercase tracking-[0.16em] shadow-xs">
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#f4f3ee]/95 text-[#11241c] text-[9px] font-semibold uppercase tracking-[0.16em] shadow-xs z-10">
                       {product.badge}
                     </span>
                   )}
@@ -779,14 +786,6 @@ export default function HomePage() {
                     >
                       Get in touch
                     </a>
-                  </li>
-                  <li>
-                    <Link
-                      href="/admin"
-                      className="text-white/45 hover:text-white transition"
-                    >
-                      Admin Portal
-                    </Link>
                   </li>
                 </ul>
               </div>

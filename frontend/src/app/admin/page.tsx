@@ -26,6 +26,11 @@ import {
   Users,
   UserCheck,
   UserX,
+  ShieldCheck,
+  KeyRound,
+  Mail,
+  ArrowLeft,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   API_URL,
@@ -86,8 +91,26 @@ export default function AdminDashboardPage() {
   const [collections, setCollections] = useState<CollectionItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [adminsList, setAdminsList] = useState<UserProfile[]>([]);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [toast, setToast] = useState<string>('');
+
+  // Admin Login & Password Reset Flow State
+  const [authMode, setAuthMode] = useState<'login' | 'forgot' | 'verify_otp'>('login');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Multiple Admin Management State
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminEmailInput, setNewAdminEmailInput] = useState('');
+  const [newAdminPhone, setNewAdminPhone] = useState('');
+  const [newAdminPassInput, setNewAdminPassInput] = useState('');
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
 
   // Product Form Modal State
   const [showProductModal, setShowProductModal] = useState(false);
@@ -100,6 +123,9 @@ export default function AdminDashboardPage() {
   const [prodDesc, setProdDesc] = useState('');
   const [prodFabric, setProdFabric] = useState('');
   const [prodImage, setProdImage] = useState('');
+  const [prodGallery, setProdGallery] = useState<string[]>([]);
+  const [customGalleryUrl, setCustomGalleryUrl] = useState('');
+  const [uploadingGalleryImg, setUploadingGalleryImg] = useState(false);
   const [prodSizes, setProdSizes] = useState('S, M, L, XL, XXL');
   const [prodColors, setProdColors] = useState('Charcoal, Forest Olive, Warm Cream');
   const [prodStock, setProdStock] = useState('30');
@@ -161,7 +187,7 @@ export default function AdminDashboardPage() {
   const fetchAllAdminData = async (authToken: string) => {
     try {
       const headers = { Authorization: `Bearer ${authToken}` };
-      const [statsRes, prodRes, colRes, ordRes, setRes, usrRes] =
+      const [statsRes, prodRes, colRes, ordRes, setRes, usrRes, admRes] =
         await Promise.all([
           fetch(`${API_URL}/settings/stats`, { headers }),
           fetch(`${API_URL}/products`),
@@ -169,6 +195,7 @@ export default function AdminDashboardPage() {
           fetch(`${API_URL}/orders`, { headers }),
           fetch(`${API_URL}/settings`),
           fetch(`${API_URL}/auth/users`, { headers }),
+          fetch(`${API_URL}/auth/admins`, { headers }),
         ]);
 
       if (statsRes.status === 401) {
@@ -182,6 +209,7 @@ export default function AdminDashboardPage() {
       if (ordRes.ok) setOrders(await ordRes.json());
       if (setRes.ok) setSettings(await setRes.json());
       if (usrRes.ok) setUsersList(await usrRes.json());
+      if (admRes.ok) setAdminsList(await admRes.json());
     } catch (e) {
       console.error('Admin fetch error:', e);
     }
@@ -240,6 +268,8 @@ export default function AdminDashboardPage() {
     setProdDesc('');
     setProdFabric('100% Premium breathable cotton. Machine wash cold.');
     setProdImage('');
+    setProdGallery([]);
+    setCustomGalleryUrl('');
     setProdSizes('S, M, L, XL, XXL');
     setProdColors('Charcoal, Forest Olive, Warm Cream');
     setProdStock('25');
@@ -257,11 +287,59 @@ export default function AdminDashboardPage() {
     setProdDesc(p.description || '');
     setProdFabric(p.fabricAndCare || '');
     setProdImage(p.image);
+    setProdGallery(p.gallery || []);
+    setCustomGalleryUrl('');
     setProdSizes((p.sizes || []).join(', '));
     setProdColors((p.colors || []).join(', '));
     setProdStock(String(p.stock ?? 25));
     setProdInStock(p.inStock ?? true);
     setShowProductModal(true);
+  };
+
+  const handleAddGalleryUrl = () => {
+    if (!customGalleryUrl.trim()) return;
+    setProdGallery((prev) => [...prev, customGalleryUrl.trim()]);
+    setCustomGalleryUrl('');
+  };
+
+  const handleRemoveGalleryImage = (idx: number) => {
+    setProdGallery((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSetGalleryAsPrimary = (idx: number) => {
+    const chosen = prodGallery[idx];
+    const oldPrimary = prodImage;
+    setProdImage(chosen);
+    setProdGallery((prev) => {
+      const next = [...prev];
+      if (oldPrimary) {
+        next[idx] = oldPrimary;
+      } else {
+        next.splice(idx, 1);
+      }
+      return next;
+    });
+  };
+
+  const handleGalleryImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !token) return;
+    setUploadingGalleryImg(true);
+    try {
+      const uploaded: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadImageToImgBB(files[i], token);
+        uploaded.push(url);
+      }
+      setProdGallery((prev) => [...prev, ...uploaded]);
+      showToast(`${uploaded.length} image(s) added to gallery!`);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Gallery image upload failed');
+    } finally {
+      setUploadingGalleryImg(false);
+    }
   };
 
   const handleImageFileSelect = async (
@@ -287,6 +365,8 @@ export default function AdminDashboardPage() {
     if (!token) return;
     setSavingProduct(true);
     try {
+      const primaryImg =
+        prodImage || (prodGallery.length > 0 ? prodGallery[0] : '');
       const payload = {
         title: prodTitle,
         category: prodCategory,
@@ -295,7 +375,8 @@ export default function AdminDashboardPage() {
         originalPrice: prodOriginalPrice ? Number(prodOriginalPrice) : null,
         description: prodDesc,
         fabricAndCare: prodFabric,
-        image: prodImage,
+        image: primaryImg,
+        gallery: prodGallery.filter(Boolean),
         sizes: prodSizes
           .split(',')
           .map((s) => s.trim())
@@ -335,6 +416,133 @@ export default function AdminDashboardPage() {
       alert(err instanceof Error ? err.message : 'Error saving product');
     } finally {
       setSavingProduct(false);
+    }
+  };
+
+  // Admin Password Reset Flow Handlers
+  const handleRequestResetOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetMessage(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP code');
+      setResetMessage({ type: 'success', text: data.message });
+      setAuthMode('verify_otp');
+    } catch (err: unknown) {
+      setResetMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Error sending reset code',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleConfirmResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetMessage({ type: 'error', text: 'Passwords do not match' });
+      return;
+    }
+    if (resetNewPassword.length < 6) {
+      setResetMessage({
+        type: 'error',
+        text: 'Password must be at least 6 characters long',
+      });
+      return;
+    }
+    setResetLoading(true);
+    setResetMessage(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: resetOtp.trim(),
+          newPassword: resetNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to reset password');
+      showToast('Password reset successfully!');
+      setAuthMode('login');
+      setLoginEmail(resetEmail);
+      setLoginPassword('');
+      setResetOtp('');
+      setResetNewPassword('');
+      setResetConfirmPassword('');
+      setResetMessage(null);
+    } catch (err: unknown) {
+      setResetMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Error resetting password',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Multiple Admin Management Handlers
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setCreatingAdmin(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newAdminName,
+          email: newAdminEmailInput,
+          phone: newAdminPhone,
+          password: newAdminPassInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to create admin');
+      showToast(data.message || 'New admin added successfully!');
+      setShowAddAdminModal(false);
+      setNewAdminName('');
+      setNewAdminEmailInput('');
+      setNewAdminPhone('');
+      setNewAdminPassInput('');
+      fetchAllAdminData(token);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to create admin');
+    } finally {
+      setCreatingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId: string, adminEmail: string) => {
+    if (!token) return;
+    if (
+      !confirm(
+        `Are you sure you want to remove admin access for ${adminEmail}?`
+      )
+    )
+      return;
+    try {
+      const res = await fetch(`${API_URL}/auth/users/${adminId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to delete admin');
+      showToast(data.message || 'Admin removed successfully');
+      fetchAllAdminData(token);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to remove admin');
     }
   };
 
@@ -530,61 +738,235 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // LOGIN SCREEN
+  // LOGIN & ADMIN PASSWORD RESET SCREEN
   if (!token) {
     return (
       <div className="min-h-screen bg-[#0e2018] text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-[#152d22] border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl">
-          <div className="text-center mb-8 flex flex-col items-center">
+          <div className="text-center mb-6 flex flex-col items-center">
             <BrandLogo size="lg" showTagline />
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 mt-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 mt-3 font-semibold">
               ADMINISTRATION PORTAL
             </p>
           </div>
 
-          {loginError && (
+          {/* Feedback Messages */}
+          {loginError && authMode === 'login' && (
             <div className="mb-5 p-3.5 rounded-xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs text-center">
               {loginError}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs text-white/75 mb-1.5 font-medium">
-                Admin Email
-              </label>
-              <input
-                type="email"
-                required
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="support@example.com"
-                className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-white/75 mb-1.5 font-medium">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loggingIn}
-              className="w-full py-3.5 rounded-xl bg-[#f4f3ee] text-[#11241c] text-xs uppercase tracking-[0.18em] font-bold hover:bg-white transition cursor-pointer mt-2"
+          {resetMessage && (
+            <div
+              className={`mb-5 p-3.5 rounded-xl border text-xs text-center ${
+                resetMessage.type === 'success'
+                  ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-200'
+                  : 'bg-red-500/15 border-red-400/30 text-red-200'
+              }`}
             >
-              {loggingIn ? 'Signing in...' : 'Sign In to Dashboard'}
-            </button>
-          </form>
+              {resetMessage.text}
+            </div>
+          )}
+
+          {/* VIEW 1: REGULAR LOGIN */}
+          {authMode === 'login' && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs text-white/75 mb-1.5 font-medium">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="admin@bunongents.com"
+                  className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs text-white/75 font-medium">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(loginEmail);
+                      setResetMessage(null);
+                      setAuthMode('forgot');
+                    }}
+                    className="text-[11px] text-[#e5c158] hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loggingIn}
+                className="w-full py-3.5 rounded-xl bg-[#f4f3ee] text-[#11241c] text-xs uppercase tracking-[0.18em] font-bold hover:bg-white transition cursor-pointer mt-2"
+              >
+                {loggingIn ? 'Signing in...' : 'Sign In to Dashboard'}
+              </button>
+            </form>
+          )}
+
+          {/* VIEW 2: FORGOT PASSWORD (REQUEST OTP VIA NODEMAILER) */}
+          {authMode === 'forgot' && (
+            <form onSubmit={handleRequestResetOtp} className="space-y-4">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-2 text-[#e5c158]">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <h3 className="font-editorial text-xl font-semibold">
+                  Reset Admin Password
+                </h3>
+                <p className="text-xs text-white/60 mt-1">
+                  Enter your admin email. We will dispatch a 6-digit OTP code to
+                  your inbox using Nodemailer.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/75 mb-1.5 font-medium">
+                  Admin Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="admin@bunongents.com"
+                  className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full py-3.5 rounded-xl bg-[#e5c158] text-[#11241c] text-xs uppercase tracking-[0.18em] font-bold hover:bg-[#ebd27c] transition cursor-pointer mt-2"
+              >
+                {resetLoading ? 'Sending OTP Code...' : 'Send OTP to Email'}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetMessage(null);
+                    setAuthMode('login');
+                  }}
+                  className="text-xs text-white/60 hover:text-white transition cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* VIEW 3: VERIFY OTP & ENTER NEW PASSWORD */}
+          {authMode === 'verify_otp' && (
+            <form onSubmit={handleConfirmResetPassword} className="space-y-4">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-2 text-emerald-400">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <h3 className="font-editorial text-xl font-semibold">
+                  Enter 6-Digit OTP Code
+                </h3>
+                <p className="text-xs text-white/60 mt-1">
+                  We sent a verification code to{' '}
+                  <strong className="text-white">{resetEmail}</strong>. Valid for
+                  10 minutes.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/75 mb-1.5 font-medium text-center">
+                  Verification Code (OTP)
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={resetOtp}
+                  onChange={(e) => setResetOtp(e.target.value)}
+                  placeholder="123456"
+                  className="w-full px-4 py-3 rounded-xl bg-black/30 border border-white/20 text-center text-xl font-mono tracking-[8px] text-white focus:outline-none focus:border-[#e5c158]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/75 mb-1.5 font-medium">
+                  New Password (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  placeholder="Enter new strong password"
+                  className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/75 mb-1.5 font-medium">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password"
+                  className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full py-3.5 rounded-xl bg-[#e5c158] text-[#11241c] text-xs uppercase tracking-[0.18em] font-bold hover:bg-[#ebd27c] transition cursor-pointer mt-2"
+              >
+                {resetLoading ? 'Resetting Password...' : 'Save & Reset Password'}
+              </button>
+
+              <div className="flex items-center justify-between text-xs text-white/60 pt-2">
+                <button
+                  type="button"
+                  onClick={handleRequestResetOtp}
+                  className="hover:text-white transition cursor-pointer underline"
+                >
+                  Resend OTP Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetMessage(null);
+                    setAuthMode('login');
+                  }}
+                  className="hover:text-white transition cursor-pointer inline-flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="mt-6 pt-5 border-t border-white/10 text-center">
             <Link
@@ -1190,15 +1572,25 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
 
-              <div className="relative min-w-[260px]">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#11241c]/40" />
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search name, email, phone..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#d7ded8] text-xs focus:outline-none focus:border-[#11241c]"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative min-w-[240px]">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#11241c]/40" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Search name, email, phone..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#d7ded8] text-xs focus:outline-none focus:border-[#11241c]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAdminModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1d3d2f] transition cursor-pointer shadow-xs shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Admin</span>
+                </button>
               </div>
             </div>
 
@@ -1534,13 +1926,32 @@ export default function AdminDashboardPage() {
                   </label>
                   <input
                     type="text"
-                    value={settings.topAnnouncement}
+                    value={settings.topAnnouncement || ''}
                     onChange={(e) =>
                       setSettings({
                         ...settings,
                         topAnnouncement: e.target.value,
                       })
                     }
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm"
+                  />
+                </div>
+
+                {/* Hero Subtitle / Kicker */}
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5">
+                    Hero Small Subtitle / Kicker Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.heroSubtitle || ''}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        heroSubtitle: e.target.value,
+                      })
+                    }
+                    placeholder="A NEW WAY TO WEAR EVERYDAY"
                     className="w-full px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm"
                   />
                 </div>
@@ -1552,7 +1963,7 @@ export default function AdminDashboardPage() {
                     </label>
                     <input
                       type="text"
-                      value={settings.heroTitleLine1}
+                      value={settings.heroTitleLine1 || ''}
                       onChange={(e) =>
                         setSettings({
                           ...settings,
@@ -1564,11 +1975,11 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1.5">
-                      Hero Headline Line 2 (Italic)
+                      Hero Headline Line 2 (Italic Accent)
                     </label>
                     <input
                       type="text"
-                      value={settings.heroTitleLine2}
+                      value={settings.heroTitleLine2 || ''}
                       onChange={(e) =>
                         setSettings({
                           ...settings,
@@ -1580,6 +1991,26 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                {/* Hero Description Paragraph */}
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5">
+                    Hero Description Paragraph
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={settings.heroDescription || ''}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        heroDescription: e.target.value,
+                      })
+                    }
+                    placeholder="Thoughtful pieces for the moments that make up your life..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm leading-relaxed"
+                  />
+                </div>
+
+                {/* Hero Background Image */}
                 <div>
                   <label className="block text-xs font-semibold mb-1.5">
                     Hero Background Image (Upload via ImgBB or paste URL)
@@ -1587,7 +2018,7 @@ export default function AdminDashboardPage() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={settings.heroImage}
+                      value={settings.heroImage || ''}
                       onChange={(e) =>
                         setSettings({ ...settings, heroImage: e.target.value })
                       }
@@ -1610,6 +2041,33 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                {/* Live Hero Mini Preview */}
+                <div className="relative rounded-2xl overflow-hidden bg-[#132920] text-white p-6 shadow-md border border-white/10 min-h-[160px] flex flex-col justify-end">
+                  {settings.heroImage && (
+                    <img
+                      src={settings.heroImage}
+                      alt="Hero Live Preview"
+                      className="absolute inset-0 w-full h-full object-cover opacity-40"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0e2219] via-[#132920]/80 to-transparent" />
+                  <div className="relative z-10">
+                    <span className="text-[10px] tracking-[0.2em] uppercase font-bold text-[#e5c158] block mb-1">
+                      {settings.heroSubtitle || 'A NEW WAY TO WEAR EVERYDAY'}
+                    </span>
+                    <h3 className="font-editorial text-2xl font-bold leading-tight">
+                      <span>{settings.heroTitleLine1 || 'Wear what'} </span>
+                      <span className="italic font-normal text-white/90">
+                        {settings.heroTitleLine2 || 'feels like you.'}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-white/80 line-clamp-2 mt-1.5 max-w-md">
+                      {settings.heroDescription ||
+                        "Thoughtful pieces for the moments that make up your life. Discover the men's collection—easy to wear, made to stand out."}
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   className="px-8 py-3.5 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#1a3529] transition cursor-pointer shadow-md"
@@ -1619,8 +2077,9 @@ export default function AdminDashboardPage() {
               </div>
             </form>
 
-            {/* Right Column: Admin Account Security */}
+            {/* Right Column: Admin Account Security & Multiple Admins */}
             <div className="lg:col-span-4 space-y-6">
+              {/* Card 1: Update Current Admin Credentials */}
               <form
                 onSubmit={handleUpdateAdminCredentials}
                 className="bg-white rounded-2xl p-6 border border-[#d7ded8] shadow-xs space-y-4"
@@ -1628,13 +2087,13 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2 border-b border-[#ebf0ec] pb-3">
                   <Lock className="w-4 h-4 text-[#11241c]" />
                   <h3 className="font-editorial text-2xl font-semibold">
-                    Admin Credentials
+                    My Admin Credentials
                   </h3>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold mb-1">
-                    Admin Email
+                    My Email Address
                   </label>
                   <input
                     type="email"
@@ -1660,15 +2119,185 @@ export default function AdminDashboardPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#1b382b] transition cursor-pointer"
                 >
-                  Update Login Credentials
+                  Update My Credentials
                 </button>
               </form>
+
+              {/* Card 2: Multiple Admin Team Management */}
+              <div className="bg-white rounded-2xl p-6 border border-[#d7ded8] shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#ebf0ec] pb-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-[#11241c]" />
+                    <h3 className="font-editorial text-2xl font-semibold">
+                      Admin Team ({adminsList.length || 1})
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAdminModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1d3d2f] transition cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Admin</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-[#11241c]/60 leading-relaxed">
+                  Multiple administrators can manage products, fulfill orders, and receive notifications.
+                </p>
+
+                {/* Admins List */}
+                <div className="space-y-2.5 divide-y divide-[#ebf0ec]">
+                  {(adminsList.length > 0
+                    ? adminsList
+                    : usersList.filter((u) => u.role === 'admin')
+                  ).map((adm) => {
+                    const isSelf =
+                      adminUser?.email?.toLowerCase() ===
+                      adm.email?.toLowerCase();
+                    return (
+                      <div
+                        key={adm._id}
+                        className="pt-2.5 first:pt-0 flex items-center justify-between text-xs"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[#11241c] truncate">
+                              {adm.name}
+                            </span>
+                            {isSelf && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-[#eef5f1] text-emerald-800 font-bold text-[9px] uppercase">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#11241c]/60 truncate">
+                            {adm.email}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {!isSelf && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteAdmin(adm._id, adm.email)
+                              }
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition cursor-pointer"
+                              title="Remove admin privileges"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* MODAL: ADD NEW ADMIN */}
+      {showAddAdminModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#d7ded8] shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#ebf0ec] mb-5">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-[#11241c]" />
+                <h2 className="font-editorial text-2xl font-semibold">
+                  Add New Administrator
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddAdminModal(false)}
+                className="p-1.5 rounded-full hover:bg-black/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAdmin} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold mb-1 text-[#11241c]">
+                  Admin Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newAdminName}
+                  onChange={(e) => setNewAdminName(e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-[#11241c]">
+                  Admin Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={newAdminEmailInput}
+                  onChange={(e) => setNewAdminEmailInput(e.target.value)}
+                  placeholder="admin2@bunongents.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-[#11241c]">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newAdminPhone}
+                  onChange={(e) => setNewAdminPhone(e.target.value)}
+                  placeholder="+880 1700-000000"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-[#11241c]">
+                  Initial Password (min 6 characters) *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newAdminPassInput}
+                  onChange={(e) => setNewAdminPassInput(e.target.value)}
+                  placeholder="Set initial login password"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-xs"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAdminModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-[#d7ded8] text-xs font-semibold hover:bg-black/5 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAdmin}
+                  className="px-6 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1d3d2f] transition cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {creatingAdmin ? 'Adding Admin...' : 'Confirm & Add Admin'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* PRODUCT CREATE / EDIT MODAL */}
       {showProductModal && (
@@ -1765,42 +2394,150 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Image Upload to ImgBB */}
-              <div>
-                <label className="block font-semibold mb-1">
-                  Product Image (Upload directly to ImgBB or paste URL) *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={prodImage}
-                    onChange={(e) => setProdImage(e.target.value)}
-                    placeholder="https://i.ibb.co/..."
-                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] text-sm"
-                  />
-                  <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0">
-                    <Upload className="w-4 h-4" />
-                    <span>
-                      {uploadingImg ? 'Uploading...' : 'Upload to ImgBB'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleImageFileSelect(e, (url) => setProdImage(url))
-                      }
-                    />
-                  </label>
+              {/* Product Images: Primary & Multiple Gallery Images */}
+              <div className="space-y-3 p-4 rounded-2xl bg-[#f4f3ee]/70 border border-[#d7ded8]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-[#11241c]" />
+                    <label className="font-semibold text-xs text-[#11241c]">
+                      Product Images &amp; Gallery ({prodImage ? 1 + prodGallery.length : prodGallery.length} total)
+                    </label>
+                  </div>
+                  <span className="text-[10px] text-[#11241c]/60">
+                    Supports multiple photos with instant thumbnail preview
+                  </span>
                 </div>
-                {prodImage && (
-                  <img
-                    src={prodImage}
-                    alt="Preview"
-                    className="mt-2 w-24 h-28 object-cover rounded-xl border border-[#d7ded8]"
-                  />
-                )}
+
+                {/* Primary Image Input */}
+                <div>
+                  <div className="text-[11px] font-semibold text-[#11241c]/80 mb-1 flex items-center justify-between">
+                    <span>Primary Cover Photo *</span>
+                    <span className="text-[10px] text-emerald-800 font-medium">Main catalog thumbnail</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required={prodGallery.length === 0}
+                      value={prodImage}
+                      onChange={(e) => setProdImage(e.target.value)}
+                      placeholder="Paste primary image URL (https://...)"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-xs"
+                    />
+                    <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingImg ? 'Uploading...' : 'Upload Cover'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleImageFileSelect(e, (url) => setProdImage(url))
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Additional Gallery Photos */}
+                <div>
+                  <div className="text-[11px] font-semibold text-[#11241c]/80 mb-1 flex items-center justify-between">
+                    <span>Additional Gallery Photos (Multiple angles / details)</span>
+                    <span className="text-[10px] text-[#11241c]/60">{prodGallery.length} additional added</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customGalleryUrl}
+                      onChange={(e) => setCustomGalleryUrl(e.target.value)}
+                      placeholder="Paste additional image URL"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddGalleryUrl();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddGalleryUrl}
+                      disabled={!customGalleryUrl.trim()}
+                      className="px-3.5 py-2.5 rounded-xl bg-[#2a3f36] text-white font-semibold hover:bg-[#1a2923] transition disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    <label className="px-4 py-2.5 rounded-xl border border-[#11241c] bg-white text-[#11241c] font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 hover:bg-[#ebf0ec] transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingGalleryImg ? 'Uploading...' : 'Upload More'}</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleGalleryImageUpload}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Image Previews Grid */}
+                <div className="pt-2">
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-[#11241c]/60 mb-2">
+                    Current Images Preview (Click &quot;Make Primary&quot; to reorder):
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {/* Primary Photo Preview */}
+                    {prodImage && (
+                      <div className="relative group w-24 h-28 rounded-xl overflow-hidden border-2 border-emerald-700 bg-white shadow-xs">
+                        <img
+                          src={prodImage}
+                          alt="Primary"
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-emerald-700 text-white text-[9px] font-bold">
+                          Primary
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Gallery Photos Preview */}
+                    {prodGallery.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="relative group w-24 h-28 rounded-xl overflow-hidden border border-[#d7ded8] bg-white shadow-xs hover:border-[#11241c]"
+                      >
+                        <img
+                          src={url}
+                          alt={`Gallery ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1.5 p-1 text-white">
+                          <button
+                            type="button"
+                            onClick={() => handleSetGalleryAsPrimary(idx)}
+                            className="px-2 py-1 rounded bg-white/20 hover:bg-white text-[9px] hover:text-[#11241c] font-medium transition cursor-pointer"
+                          >
+                            Make Primary
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryImage(idx)}
+                            className="p-1 rounded-full bg-red-600/80 hover:bg-red-600 text-white transition cursor-pointer"
+                            title="Remove image"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {!prodImage && prodGallery.length === 0 && (
+                      <div className="w-full py-4 text-center text-xs text-[#11241c]/50 border border-dashed border-[#c2ccc5] rounded-xl bg-white/50">
+                        No images added yet. Upload or paste image URLs above.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -2,6 +2,10 @@ const express = require('express');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const { protectUser, protectAdmin } = require('../middleware/auth');
+const {
+  sendOrderConfirmationEmail,
+  sendOrderStatusUpdateEmail,
+} = require('../services/emailService');
 
 const router = express.Router();
 
@@ -64,6 +68,11 @@ router.post('/', protectUser, async (req, res) => {
         }).catch(() => {});
       }
     }
+
+    // Send order confirmation email asynchronously
+    sendOrderConfirmationEmail(order).catch((mailErr) => {
+      console.error('[Order Email] Error sending confirmation email:', mailErr.message);
+    });
 
     res.status(201).json(order);
   } catch (error) {
@@ -139,10 +148,20 @@ router.put('/:id', protectAdmin, async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
+    const previousStatus = order.orderStatus;
+
     if (req.body.orderStatus) order.orderStatus = req.body.orderStatus;
     if (req.body.paymentStatus) order.paymentStatus = req.body.paymentStatus;
 
     const updated = await order.save();
+
+    // If order was marked as Confirmed, notify customer
+    if (req.body.orderStatus === 'Confirmed' && previousStatus !== 'Confirmed') {
+      sendOrderStatusUpdateEmail(updated).catch((mailErr) => {
+        console.error('[Order Status Email] Error sending confirmed email:', mailErr.message);
+      });
+    }
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });

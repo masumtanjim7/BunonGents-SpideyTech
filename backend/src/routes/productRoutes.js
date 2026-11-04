@@ -79,8 +79,10 @@ router.post('/', protectAdmin, async (req, res) => {
       inStock,
     } = req.body;
 
-    if (!title || price === undefined || !image) {
-      return res.status(400).json({ message: 'Title, price, and primary image are required' });
+    const primaryImage = image || (Array.isArray(gallery) && gallery.length > 0 ? gallery[0] : '');
+
+    if (!title || price === undefined || !primaryImage) {
+      return res.status(400).json({ message: 'Title, price, and at least one image are required' });
     }
 
     const slug = createSlug(title);
@@ -94,8 +96,8 @@ router.post('/', protectAdmin, async (req, res) => {
       description: description || '',
       fabricAndCare:
         fabricAndCare || '100% Premium breathable cotton. Machine wash cold, tumble dry low.',
-      image,
-      gallery: Array.isArray(gallery) ? gallery : [],
+      image: primaryImage,
+      gallery: Array.isArray(gallery) ? gallery.filter(Boolean) : [],
       sizes: Array.isArray(sizes) && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL', 'XXL'],
       colors: Array.isArray(colors) && colors.length > 0 ? colors : ['Charcoal', 'Warm Cream'],
       stock: stock !== undefined ? Number(stock) : 25,
