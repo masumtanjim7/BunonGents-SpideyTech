@@ -428,41 +428,49 @@ export default function AdminDashboardPage() {
 
   const STANDARD_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
-  const selectedSizesArray = prodSizes
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const parseCsvList = (raw: string): string[] =>
+    raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  const selectedSizesArray = parseCsvList(prodSizes);
 
   const toggleProductSize = (size: string) => {
-    const exists = selectedSizesArray.some(
-      (s) => s.toUpperCase() === size.toUpperCase()
-    );
-    let updated: string[];
-    if (exists) {
-      updated = selectedSizesArray.filter(
-        (s) => s.toUpperCase() !== size.toUpperCase()
+    setProdSizes((prev) => {
+      const current = parseCsvList(prev);
+      const exists = current.some(
+        (s) => s.toUpperCase() === size.toUpperCase()
       );
-    } else {
-      const next = [...selectedSizesArray, size];
-      updated = [
-        ...STANDARD_SIZES.filter((std) =>
-          next.some((n) => n.toUpperCase() === std)
-        ),
-        ...next.filter((n) => !STANDARD_SIZES.includes(n.toUpperCase())),
-      ];
-    }
-    setProdSizes(updated.join(', '));
+      let updated: string[];
+      if (exists) {
+        updated = current.filter(
+          (s) => s.toUpperCase() !== size.toUpperCase()
+        );
+      } else {
+        const next = [...current, size];
+        updated = [
+          ...STANDARD_SIZES.filter((std) =>
+            next.some((n) => n.toUpperCase() === std)
+          ),
+          ...next.filter((n) => !STANDARD_SIZES.includes(n.toUpperCase())),
+        ];
+      }
+      return updated.join(', ');
+    });
   };
 
   const toggleAllStandardSizes = () => {
-    const allSelected = STANDARD_SIZES.every((std) =>
-      selectedSizesArray.some((s) => s.toUpperCase() === std)
-    );
-    if (allSelected) {
-      setProdSizes('');
-    } else {
-      setProdSizes(STANDARD_SIZES.join(', '));
-    }
+    setProdSizes((prev) => {
+      const current = parseCsvList(prev);
+      const allSelected = STANDARD_SIZES.every((std) =>
+        current.some((s) => s.toUpperCase() === std)
+      );
+      if (allSelected) {
+        return '';
+      }
+      return STANDARD_SIZES.join(', ');
+    });
   };
 
   const STANDARD_SIZE_PRESETS: Record<string, { chest: string; length: string }> = {
@@ -491,16 +499,18 @@ export default function AdminDashboardPage() {
   const handleAutoFillSizeChart = () => {
     const targetSizes =
       selectedSizesArray.length > 0 ? selectedSizesArray : STANDARD_SIZES;
-    const nextChart: Record<string, { chest: string; length: string }> = {
-      ...prodSizeChart,
-    };
-    targetSizes.forEach((sz) => {
-      const upper = sz.toUpperCase();
-      if (STANDARD_SIZE_PRESETS[upper]) {
-        nextChart[sz] = { ...STANDARD_SIZE_PRESETS[upper] };
-      }
+    setProdSizeChart((prev) => {
+      const nextChart: Record<string, { chest: string; length: string }> = {
+        ...prev,
+      };
+      targetSizes.forEach((sz) => {
+        const upper = sz.toUpperCase();
+        if (STANDARD_SIZE_PRESETS[upper]) {
+          nextChart[sz] = { ...STANDARD_SIZE_PRESETS[upper] };
+        }
+      });
+      return nextChart;
     });
-    setProdSizeChart(nextChart);
   };
 
   // Preset Editorial Badges (Single-Select Only)
@@ -522,11 +532,11 @@ export default function AdminDashboardPage() {
       : PRESET_BADGES;
 
   const handleSelectSingleBadge = (badgeLabel: string) => {
-    if (prodBadge.trim().toUpperCase() === badgeLabel.toUpperCase()) {
-      setProdBadge('');
-    } else {
-      setProdBadge(badgeLabel.toUpperCase());
-    }
+    setProdBadge((prev) =>
+      prev.trim().toUpperCase() === badgeLabel.toUpperCase()
+        ? ''
+        : badgeLabel.toUpperCase()
+    );
   };
 
   const handleAddCustomBadge = () => {
@@ -552,10 +562,7 @@ export default function AdminDashboardPage() {
     { name: 'Khaki', hex: '#b8a37a' },
   ];
 
-  const selectedColorsArray = prodColors
-    .split(',')
-    .map((c) => c.trim())
-    .filter(Boolean);
+  const selectedColorsArray = parseCsvList(prodColors);
 
   const allColorOptions: { name: string; hex: string }[] = [
     ...PRESET_COLORS,
@@ -570,29 +577,29 @@ export default function AdminDashboardPage() {
   ];
 
   const toggleProductColor = (colorName: string) => {
-    const exists = selectedColorsArray.some(
-      (c) => c.toLowerCase() === colorName.toLowerCase()
-    );
-    let updated: string[];
-    if (exists) {
-      updated = selectedColorsArray.filter(
-        (c) => c.toLowerCase() !== colorName.toLowerCase()
+    setProdColors((prev) => {
+      const current = parseCsvList(prev);
+      const exists = current.some(
+        (c) => c.toLowerCase() === colorName.toLowerCase()
       );
-    } else {
-      updated = [...selectedColorsArray, colorName];
-    }
-    setProdColors(updated.join(', '));
+      const updated = exists
+        ? current.filter((c) => c.toLowerCase() !== colorName.toLowerCase())
+        : [...current, colorName];
+      return updated.join(', ');
+    });
   };
 
   const handleAddCustomColor = () => {
     const cleaned = customColorInput.trim();
     if (!cleaned) return;
-    const exists = selectedColorsArray.some(
-      (c) => c.toLowerCase() === cleaned.toLowerCase()
-    );
-    if (!exists) {
-      setProdColors([...selectedColorsArray, cleaned].join(', '));
-    }
+    setProdColors((prev) => {
+      const current = parseCsvList(prev);
+      const exists = current.some(
+        (c) => c.toLowerCase() === cleaned.toLowerCase()
+      );
+      if (exists) return prev;
+      return [...current, cleaned].join(', ');
+    });
     setCustomColorInput('');
   };
 
@@ -657,10 +664,18 @@ export default function AdminDashboardPage() {
     try {
       const primaryImg =
         prodImage || (prodGallery.length > 0 ? prodGallery[0] : '');
+      const finalBadge =
+        prodBadge.trim() ||
+        customBadgeInput.trim().toUpperCase() ||
+        'EVERYDAY ESSENTIAL';
+      const mergedColorsList = [
+        ...parseCsvList(prodColors),
+        ...(customColorInput.trim() ? [customColorInput.trim()] : []),
+      ];
       const payload = {
         title: prodTitle,
         category: prodCategory,
-        badge: prodBadge || 'EVERYDAY ESSENTIAL',
+        badge: finalBadge,
         price: Number(prodPrice),
         originalPrice: prodOriginalPrice ? Number(prodOriginalPrice) : null,
         description: prodDesc,
@@ -670,18 +685,13 @@ export default function AdminDashboardPage() {
         image: primaryImg,
         gallery: prodGallery.filter(Boolean),
         sizes: prodSizes.trim()
-          ? prodSizes
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
+          ? parseCsvList(prodSizes)
           : ['S', 'M', 'L', 'XL', 'XXL'],
         sizeChart: prodSizeChart,
-        colors: prodColors.trim()
-          ? prodColors
-              .split(',')
-              .map((c) => c.trim())
-              .filter(Boolean)
-          : ['Charcoal', 'Forest Olive', 'Warm Cream'],
+        colors:
+          mergedColorsList.length > 0
+            ? mergedColorsList
+            : ['Charcoal', 'Forest Olive', 'Warm Cream'],
         stock: prodStock ? Number(prodStock) : 25,
         inStock: prodInStock,
       };
@@ -4045,72 +4055,61 @@ export default function AdminDashboardPage() {
                       Top Left Badge (Select only 1 option)
                     </label>
                     <p className="text-[10px] text-[#11241c]/55">
-                      Choose a signature label for the product card or type a custom one below
+                      Tick a signature label below or type your own in the input box
                     </p>
                   </div>
                   {prodBadge && (
-                    <span className="px-2.5 py-1 rounded-md bg-[#11241c] text-[#e5c158] text-[10px] font-bold uppercase tracking-wider">
-                      Selected: {prodBadge}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-md bg-[#11241c] text-[#e5c158] text-[10px] font-bold uppercase tracking-wider">
+                        Selected: {prodBadge}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setProdBadge('')}
+                        className="text-[10px] font-semibold text-red-600 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   )}
                 </div>
 
                 {/* Clickable Single-Select Badge Checkboxes */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {badgeOptions.map((badgeLabel) => {
+                  {PRESET_BADGES.map((badgeLabel) => {
                     const isSelected =
                       prodBadge.trim().toUpperCase() ===
                       badgeLabel.toUpperCase();
                     return (
-                      <button
+                      <label
                         key={badgeLabel}
-                        type="button"
-                        onClick={() => handleSelectSingleBadge(badgeLabel)}
                         className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none transition text-left ${
                           isSelected
                             ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
-                            : 'bg-white text-[#11241c]/75 border-[#d7ded8] hover:border-[#11241c]/45'
+                            : 'bg-white text-[#11241c]/80 border-[#d7ded8] hover:border-[#11241c]/45'
                         }`}
                       >
-                        <span
-                          className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none shrink-0 ${
-                            isSelected
-                              ? 'bg-[#e5c158] border-[#e5c158] text-[#11241c]'
-                              : 'border-[#c2ccc5] bg-[#f4f3ee]'
-                          }`}
-                        >
-                          {isSelected ? '✓' : ''}
-                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectSingleBadge(badgeLabel)}
+                          className="w-3.5 h-3.5 accent-[#e5c158] rounded cursor-pointer shrink-0"
+                        />
                         <span className="truncate">{badgeLabel}</span>
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
 
-                {/* Custom Badge Input */}
+                {/* Live Synced & Custom Badge Input */}
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <input
                     type="text"
-                    value={customBadgeInput}
-                    onChange={(e) => setCustomBadgeInput(e.target.value)}
-                    placeholder="Not in the list? Type custom badge (e.g. SUMMER LINEN)..."
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs focus:outline-none focus:border-[#11241c]"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomBadge();
-                      }
-                    }}
+                    value={prodBadge}
+                    onChange={(e) => setProdBadge(e.target.value.toUpperCase())}
+                    placeholder="Tick a badge above or type custom badge (e.g. SUMMER LINEN)..."
+                    className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs font-semibold text-[#11241c] focus:outline-none focus:border-[#11241c]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomBadge}
-                    disabled={!customBadgeInput.trim()}
-                    className="px-4 py-2 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] transition cursor-pointer disabled:opacity-45 flex items-center justify-center gap-1.5 shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add &amp; Select Badge</span>
-                  </button>
                 </div>
               </div>
 
@@ -4261,7 +4260,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Available Sizes */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f3ee]/70 border border-[#d7ded8] space-y-2">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f3ee]/70 border border-[#d7ded8] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="block font-semibold text-xs text-[#11241c]">
                     Available Sizes ({selectedSizesArray.length} selected)
@@ -4284,29 +4283,35 @@ export default function AdminDashboardPage() {
                       (s) => s.toUpperCase() === sz
                     );
                     return (
-                      <button
+                      <label
                         key={sz}
-                        type="button"
-                        onClick={() => toggleProductSize(sz)}
                         className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-bold cursor-pointer select-none transition ${
                           isChecked
                             ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
-                            : 'bg-white text-[#11241c]/75 border-[#d7ded8] hover:border-[#11241c]/50'
+                            : 'bg-white text-[#11241c]/80 border-[#d7ded8] hover:border-[#11241c]/50'
                         }`}
                       >
-                        <span
-                          className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none ${
-                            isChecked
-                              ? 'bg-[#e5c158] border-[#e5c158] text-[#11241c]'
-                              : 'border-[#c2ccc5] bg-[#f4f3ee]'
-                          }`}
-                        >
-                          {isChecked ? '✓' : ''}
-                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleProductSize(sz)}
+                          className="w-3.5 h-3.5 accent-[#e5c158] rounded cursor-pointer shrink-0"
+                        />
                         <span>{sz}</span>
-                      </button>
+                      </label>
                     );
                   })}
+                </div>
+
+                {/* Live Synced & Custom Sizes Input */}
+                <div className="pt-0.5">
+                  <input
+                    type="text"
+                    value={prodSizes}
+                    onChange={(e) => setProdSizes(e.target.value)}
+                    placeholder="Tick sizes above (S, M, L, XL, XXL) or type custom sizes (e.g. 30, 32, 34, 36)..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs font-semibold text-[#11241c] focus:outline-none focus:border-[#11241c]"
+                  />
                 </div>
 
                 {/* Size Chart Measurements (X-axis = Available Sizes, Y-axis = Chest & Length) */}
@@ -4428,7 +4433,7 @@ export default function AdminDashboardPage() {
                       Available Colors ({selectedColorsArray.length} selected)
                     </label>
                     <p className="text-[10px] text-[#11241c]/55">
-                      Tick one or more colors below, or add any custom shade using the input box
+                      Tick one or more colors below, or type any custom shade in the input box
                     </p>
                   </div>
                   {selectedColorsArray.length > 0 && (
@@ -4444,15 +4449,13 @@ export default function AdminDashboardPage() {
 
                 {/* Clickable Color Checkboxes */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {allColorOptions.map((colObj) => {
+                  {PRESET_COLORS.map((colObj) => {
                     const isChecked = selectedColorsArray.some(
                       (c) => c.toLowerCase() === colObj.name.toLowerCase()
                     );
                     return (
-                      <button
+                      <label
                         key={colObj.name}
-                        type="button"
-                        onClick={() => toggleProductColor(colObj.name)}
                         className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer select-none transition text-left ${
                           isChecked
                             ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
@@ -4460,50 +4463,56 @@ export default function AdminDashboardPage() {
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none shrink-0 ${
-                              isChecked
-                                ? 'bg-[#e5c158] border-[#e5c158] text-[#11241c]'
-                                : 'border-[#c2ccc5] bg-[#f4f3ee]'
-                            }`}
-                          >
-                            {isChecked ? '✓' : ''}
-                          </span>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleProductColor(colObj.name)}
+                            className="w-3.5 h-3.5 accent-[#e5c158] rounded cursor-pointer shrink-0"
+                          />
                           <span className="truncate">{colObj.name}</span>
                         </div>
                         <span
                           className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
                           style={{ backgroundColor: colObj.hex }}
                         />
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
 
-                {/* Custom Color Input */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                {/* Live Synced & Custom Colors Input */}
+                <div className="space-y-2 pt-1">
                   <input
                     type="text"
-                    value={customColorInput}
-                    onChange={(e) => setCustomColorInput(e.target.value)}
-                    placeholder="Add custom color (e.g. Forest Olive, Rust, Teal, Mustard)..."
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs focus:outline-none focus:border-[#11241c]"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomColor();
-                      }
-                    }}
+                    value={prodColors}
+                    onChange={(e) => setProdColors(e.target.value)}
+                    placeholder="Selected colors appear here (e.g. Black, White, Maroon) or type comma-separated shades..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs font-semibold text-[#11241c] focus:outline-none focus:border-[#11241c]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomColor}
-                    disabled={!customColorInput.trim()}
-                    className="px-4 py-2 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] transition cursor-pointer disabled:opacity-45 flex items-center justify-center gap-1.5 shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Color</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={customColorInput}
+                      onChange={(e) => setCustomColorInput(e.target.value)}
+                      placeholder="Or add a custom color one by one (e.g. Forest Olive, Rust, Teal)..."
+                      className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-white text-xs focus:outline-none focus:border-[#11241c]"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomColor();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomColor}
+                      disabled={!customColorInput.trim()}
+                      className="px-4 py-2 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] transition cursor-pointer disabled:opacity-45 flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Color</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
