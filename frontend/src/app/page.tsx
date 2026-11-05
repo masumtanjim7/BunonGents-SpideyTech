@@ -12,6 +12,9 @@ import {
   Layers,
   Search,
   User,
+  Menu,
+  X,
+  ChevronRight,
 } from 'lucide-react';
 import {
   API_URL,
@@ -203,6 +206,18 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [activeCategory, setActiveCategory] = useState<string>('All pieces');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     async function loadStoreData() {
@@ -313,7 +328,7 @@ export default function HomePage() {
               {user ? (
                 <Link
                   href="/account"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition"
+                  className="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition"
                 >
                   <User className="w-3.5 h-3.5 text-[#e5c158]" />
                   <span className="max-w-[90px] truncate">
@@ -323,7 +338,7 @@ export default function HomePage() {
               ) : (
                 <button
                   onClick={() => openAuthModal('register')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/25 bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition cursor-pointer"
                 >
                   <User className="w-3.5 h-3.5" />
                   <span>Account</span>
@@ -332,7 +347,7 @@ export default function HomePage() {
 
               <button
                 onClick={openCart}
-                className="relative w-10 h-10 rounded-full border border-white/25 bg-white/10 flex items-center justify-center hover:bg-white/20 transition cursor-pointer"
+                className="relative w-10 h-10 rounded-full border border-white/25 bg-white/10 flex items-center justify-center hover:bg-white/20 transition cursor-pointer shrink-0"
                 aria-label="Open shopping bag"
               >
                 <ShoppingBag className="w-4 h-4 text-white" />
@@ -340,9 +355,181 @@ export default function HomePage() {
                   {totalItems}
                 </span>
               </button>
+
+              {/* Mobile Menu Hamburger Toggle */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden relative w-10 h-10 rounded-full border border-white/25 bg-white/10 flex items-center justify-center hover:bg-white/20 transition cursor-pointer text-white shrink-0"
+                aria-label="Open mobile menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
             </div>
           </nav>
         </header>
+
+        {/* Mobile Navigation Drawer & Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        <div
+          className={`fixed top-0 right-0 bottom-0 z-50 w-[85%] max-w-[340px] bg-[#0e2018] text-white border-l border-white/10 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out md:hidden ${
+            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+          }`}
+        >
+          {/* Top bar with Logo & Close button */}
+          <div className="p-5 border-b border-white/10 flex items-center justify-between">
+            <BrandLogo size="sm" />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-white transition cursor-pointer"
+              aria-label="Close menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scrollable menu body */}
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+            {/* Featured Pill */}
+            <a
+              href="#shop-men"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-[#e5c158]/40 hover:bg-white/10 transition group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-[#e5c158]" />
+                <span className="text-xs font-semibold tracking-[0.16em] uppercase text-[#e5c158]">
+                  MADE FOR THE EVERYDAY
+                </span>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-[#e5c158] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </a>
+
+            {/* Navigation Links */}
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 font-semibold px-2 mb-2">
+                Navigation
+              </p>
+              <a
+                href="#collections"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-base font-medium text-white/90 hover:text-white transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <Layers className="w-4 h-4 text-white/50 group-hover:text-white" />
+                  <span>Collections</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 group-hover:translate-x-1 group-hover:text-white transition-transform" />
+              </a>
+
+              <a
+                href="#shop-men"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-base font-medium text-white/90 hover:text-white transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <Shirt className="w-4 h-4 text-white/50 group-hover:text-white" />
+                  <span>Shop Men</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 group-hover:translate-x-1 group-hover:text-white transition-transform" />
+              </a>
+
+              <a
+                href="#our-promise"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-base font-medium text-white/90 hover:text-white transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-4 h-4 text-white/50 group-hover:text-white" />
+                  <span>Our Promise</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 group-hover:translate-x-1 group-hover:text-white transition-transform" />
+              </a>
+
+              <Link
+                href="/track-order"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-white/5 text-base font-medium text-white/90 hover:text-white transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <Search className="w-4 h-4 text-white/50 group-hover:text-white" />
+                  <span>Track Order</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 group-hover:translate-x-1 group-hover:text-white transition-transform" />
+              </Link>
+            </div>
+
+            {/* Account Section */}
+            <div className="pt-2">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 font-semibold px-2 mb-2">
+                Account
+              </p>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#e5c158]/20 border border-[#e5c158]/40 flex items-center justify-center text-[#e5c158] font-bold text-sm shrink-0">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-white/60 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#e5c158] text-[#11241c] text-xs font-bold uppercase tracking-wider hover:bg-[#edd47a] transition"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>My Account</span>
+                    </Link>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openAuthModal('login');
+                      }}
+                      className="w-full py-2.5 px-4 rounded-lg bg-[#e5c158] text-[#11241c] text-xs font-bold uppercase tracking-wider hover:bg-[#edd47a] transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Sign In</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openAuthModal('register');
+                      }}
+                      className="w-full py-2.5 px-4 rounded-lg bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition border border-white/15 flex items-center justify-center cursor-pointer"
+                    >
+                      Create Account
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer info in drawer */}
+          <div className="p-5 border-t border-white/10 bg-black/20 text-xs text-white/60 space-y-1">
+            <p className="font-editorial italic text-white/80">Pure Comfort, Tailored Presence.</p>
+            <p className="text-[11px] text-white/40">Hotline: {settings.contactPhone}</p>
+          </div>
+        </div>
 
         {/* Hero Main Content */}
         <div className="relative z-10 max-w-6xl w-full mx-auto px-4 sm:px-8 my-auto py-16 lg:py-24">
