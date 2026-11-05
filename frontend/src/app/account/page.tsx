@@ -91,31 +91,34 @@ export default function CustomerAccountPage() {
   return (
     <div className="min-h-screen bg-[#f4f3ee] text-[#11241c]">
       {/* Header */}
-      <header className="bg-[#11241c] text-white py-5 px-4 sm:px-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="bg-[#11241c] text-white py-3.5 sm:py-5 px-4 sm:px-8 sticky top-0 z-30 shadow-md">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-white/80 hover:text-white transition"
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-white/80 hover:text-white transition py-1"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Store</span>
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Back to Store</span>
+            <span className="sm:hidden text-[11px] font-semibold">Store</span>
           </Link>
 
           <BrandLogo size="sm" />
 
-          {user && (
+          {user ? (
             <button
               onClick={logout}
               className="inline-flex items-center gap-1.5 text-xs text-red-300 hover:text-red-200 transition cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
+          ) : (
+            <div className="w-8 sm:hidden" />
           )}
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 py-10 lg:py-14">
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
         {toast && (
           <div className="fixed bottom-6 right-6 z-50 bg-[#11241c] text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 text-xs">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -124,54 +127,54 @@ export default function CustomerAccountPage() {
         )}
 
         {!user ? (
-          <div className="max-w-md mx-auto bg-white rounded-3xl p-10 text-center border border-[#d7ded8] shadow-xs">
+          <div className="max-w-md mx-auto bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-10 text-center border border-[#d7ded8] shadow-xs">
             <User className="w-10 h-10 text-[#11241c]/40 mx-auto mb-3" />
-            <h1 className="font-editorial text-3xl mb-2">
+            <h1 className="font-editorial text-2xl sm:text-3xl mb-2">
               Sign in to Your Account
             </h1>
-            <p className="text-xs text-[#11241c]/65 mb-6">
+            <p className="text-xs sm:text-sm text-[#11241c]/65 mb-6 leading-relaxed">
               Create your Bunon Gents account or sign in to view your orders and
               saved shipping details.
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => openAuthModal('register')}
-                className="px-6 py-3 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold cursor-pointer hover:bg-[#1a3529] transition shadow-md"
               >
                 Create Account
               </button>
               <button
                 onClick={() => openAuthModal('login')}
-                className="px-6 py-3 rounded-xl border border-[#11241c]/25 text-xs uppercase tracking-widest font-semibold cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl border border-[#11241c]/25 text-xs uppercase tracking-widest font-semibold cursor-pointer hover:bg-[#ebf0ec] transition"
               >
                 Sign In
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.22em] text-[#11241c]/55 font-semibold">
                   MEMBER ACCOUNT
                 </p>
-                <h1 className="font-editorial text-4xl sm:text-5xl text-[#11241c] mt-1">
+                <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl text-[#11241c] mt-1 break-words">
                   Hello, {user.name}.
                 </h1>
               </div>
 
-              <div className="flex items-center gap-2 text-xs bg-white px-4 py-2 rounded-full border border-[#d7ded8]">
-                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              <div className="inline-flex self-start sm:self-auto items-center gap-2 text-xs bg-white px-3.5 py-1.5 rounded-full border border-[#d7ded8] shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>Account Status: Active</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               {/* Left: Profile & Saved Shipping */}
               <div className="lg:col-span-5">
                 <form
                   onSubmit={handleSaveProfile}
-                  className="bg-white rounded-3xl p-6 sm:p-8 border border-[#d7ded8] shadow-xs space-y-4"
+                  className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#d7ded8] shadow-xs space-y-4"
                 >
                   <div className="flex items-center gap-2 border-b border-[#ebf0ec] pb-3">
                     <User className="w-4 h-4" />
@@ -218,7 +221,7 @@ export default function CustomerAccountPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold mb-1">
                         Delivery Zone
@@ -288,10 +291,10 @@ export default function CustomerAccountPage() {
 
               {/* Right: Order History */}
               <div className="lg:col-span-7 space-y-4">
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#d7ded8] shadow-xs">
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-[#d7ded8] shadow-xs">
                   <div className="flex items-center justify-between border-b border-[#ebf0ec] pb-4 mb-5">
                     <div className="flex items-center gap-2">
-                      <Package className="w-5 h-5" />
+                      <Package className="w-5 h-5 text-[#11241c]" />
                       <h2 className="font-editorial text-2xl font-semibold">
                         Order History ({orders.length})
                       </h2>
@@ -303,13 +306,13 @@ export default function CustomerAccountPage() {
                       Loading your orders...
                     </p>
                   ) : orders.length === 0 ? (
-                    <div className="text-center py-12">
+                    <div className="text-center py-10 sm:py-12">
                       <p className="text-sm text-[#11241c]/60 mb-4">
                         You haven&apos;t placed any orders yet.
                       </p>
                       <Link
                         href="/"
-                        className="inline-flex px-5 py-2.5 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold"
+                        className="inline-flex px-5 py-2.5 rounded-xl bg-[#11241c] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#1a3529] transition shadow-md"
                       >
                         Explore Men&apos;s Collection
                       </Link>
@@ -319,23 +322,23 @@ export default function CustomerAccountPage() {
                       {orders.map((order) => (
                         <div
                           key={order._id}
-                          className="p-5 rounded-2xl bg-[#f4f3ee] border border-[#d7ded8] space-y-3"
+                          className="p-4 sm:p-5 rounded-2xl bg-[#f4f3ee] border border-[#d7ded8] space-y-3 overflow-hidden"
                         >
-                          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#d7ded8]">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#d7ded8]">
                             <div>
-                              <span className="font-mono text-sm font-bold">
+                              <span className="font-mono text-sm font-bold block sm:inline break-all">
                                 {order.orderNumber}
                               </span>
-                              <span className="text-xs text-[#11241c]/60 ml-3">
+                              <span className="text-xs text-[#11241c]/60 sm:ml-3 block sm:inline mt-0.5 sm:mt-0">
                                 {new Date(order.createdAt).toLocaleDateString()}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                               <span className="px-3 py-1 rounded-full bg-[#11241c] text-white text-[11px] font-semibold flex items-center gap-1">
                                 <Truck className="w-3 h-3" />
                                 {order.orderStatus}
                               </span>
-                              <span className="px-2.5 py-1 rounded-full bg-white text-[11px] font-medium">
+                              <span className="px-2.5 py-1 rounded-full bg-white text-[11px] font-medium border border-[#d7ded8] truncate max-w-full">
                                 {order.paymentMethod} ({order.paymentStatus})
                               </span>
                             </div>
@@ -345,13 +348,15 @@ export default function CustomerAccountPage() {
                             {order.items.map((item, idx) => (
                               <div
                                 key={idx}
-                                className="flex items-center justify-between text-xs"
+                                className="flex items-start sm:items-center justify-between gap-2 text-xs"
                               >
-                                <span>
-                                  <strong>{item.title}</strong> ({item.size} ·{' '}
-                                  {item.color}) × {item.quantity}
+                                <span className="min-w-0 flex-1">
+                                  <strong className="text-[#11241c]">{item.title}</strong>{' '}
+                                  <span className="text-[#11241c]/70">
+                                    ({item.size} · {item.color}) × {item.quantity}
+                                  </span>
                                 </span>
-                                <span className="font-semibold">
+                                <span className="font-semibold shrink-0 font-mono pl-2">
                                   {formatBDT(item.price * item.quantity)}
                                 </span>
                               </div>
@@ -359,8 +364,8 @@ export default function CustomerAccountPage() {
                           </div>
 
                           <div className="pt-2 border-t border-[#d7ded8] flex justify-between items-center text-xs font-bold">
-                            <span>Total Paid / Payable</span>
-                            <span className="text-sm">
+                            <span className="text-[#11241c]/70">Total Paid / Payable</span>
+                            <span className="text-sm font-mono text-[#11241c]">
                               {formatBDT(order.totalAmount)}
                             </span>
                           </div>
