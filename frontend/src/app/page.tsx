@@ -250,11 +250,24 @@ export default function HomePage() {
     loadStoreData();
   }, []);
 
+  const baseCategories = settings.categories?.length
+    ? settings.categories
+    : ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'];
+
   const categoryTabs = [
     'All pieces',
-    ...(settings.categories?.length
-      ? settings.categories
-      : ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection']),
+    ...baseCategories,
+    ...products
+      .map((p) => p.category)
+      .filter(
+        (cat) =>
+          cat &&
+          !baseCategories.some((c) => c.toLowerCase() === cat.toLowerCase())
+      )
+      .filter(
+        (cat, idx, arr) =>
+          arr.findIndex((c) => c.toLowerCase() === cat.toLowerCase()) === idx
+      ),
   ];
 
   const filteredProducts =

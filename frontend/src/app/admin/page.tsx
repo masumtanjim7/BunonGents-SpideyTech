@@ -153,9 +153,14 @@ export default function AdminDashboardPage() {
   const [newAdminPassInput, setNewAdminPassInput] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
-  // Product Catalog Filter State
+  // Product Catalog Filter & Category Manager State
   const [adminProdCategory, setAdminProdCategory] = useState('All');
   const [adminProdSearch, setAdminProdSearch] = useState('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [showInlineCategoryAdd, setShowInlineCategoryAdd] = useState(false);
+  const [inlineCategoryName, setInlineCategoryName] = useState('');
 
   // Product Form Modal State
   const [showProductModal, setShowProductModal] = useState(false);
@@ -722,6 +727,115 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Add New Product Category
+  const handleAddCategory = async (
+    rawName: string,
+    selectForProduct = false
+  ) => {
+    const trimmed = rawName.trim();
+    if (!trimmed || !token) return;
+
+    const currentCats =
+      settings?.categories && settings.categories.length > 0
+        ? settings.categories
+        : ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'];
+
+    const exists = currentCats.some(
+      (c) => c.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      showToast(`Category "${trimmed}" already exists.`);
+      if (selectForProduct) {
+        const matched =
+          currentCats.find((c) => c.toLowerCase() === trimmed.toLowerCase()) ||
+          trimmed;
+        setProdCategory(matched);
+        setShowInlineCategoryAdd(false);
+        setInlineCategoryName('');
+      }
+      return;
+    }
+
+    const updatedCategories = [...currentCats, trimmed];
+    setSavingCategory(true);
+    try {
+      const res = await fetch(`${API_URL}/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...(settings || {}),
+          categories: updatedCategories,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setSettings(updated);
+        setNewCategoryName('');
+        if (selectForProduct) {
+          setProdCategory(trimmed);
+          setShowInlineCategoryAdd(false);
+          setInlineCategoryName('');
+        }
+        showToast(`Category "${trimmed}" created!`);
+      }
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  // Delete Product Category
+  const handleDeleteCategory = async (catToDelete: string) => {
+    if (!token) return;
+    const currentCats =
+      settings?.categories && settings.categories.length > 0
+        ? settings.categories
+        : ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'];
+
+    if (currentCats.length <= 1) {
+      alert('At least one product category must remain.');
+      return;
+    }
+
+    if (
+      !confirm(
+        `Remove category "${catToDelete}" from the category filter bar?`
+      )
+    ) {
+      return;
+    }
+
+    const updatedCategories = currentCats.filter((c) => c !== catToDelete);
+    setSavingCategory(true);
+    try {
+      const res = await fetch(`${API_URL}/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...(settings || {}),
+          categories: updatedCategories,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setSettings(updated);
+        if (adminProdCategory.toLowerCase() === catToDelete.toLowerCase()) {
+          setAdminProdCategory('All');
+        }
+        showToast(`Category "${catToDelete}" removed.`);
+      }
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   const handleUpdateAdminCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -1055,15 +1169,27 @@ export default function AdminDashboardPage() {
     return matchesStatus && matchesSearch;
   });
 
+  const configuredCategories =
+    settings?.categories && settings.categories.length > 0
+      ? settings.categories
+      : ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'];
+
   const productCategories = [
     'All',
-    ...(settings?.categories || [
-      'Jeans',
-      'Shirts',
-      'T-shirts',
-      'Sweaters',
-      'Winter collection',
-    ]),
+    ...configuredCategories,
+    ...products
+      .map((p) => p.category)
+      .filter(
+        (cat) =>
+          cat &&
+          !configuredCategories.some(
+            (c) => c.toLowerCase() === cat.toLowerCase()
+          )
+      )
+      .filter(
+        (cat, idx, arr) =>
+          arr.findIndex((c) => c.toLowerCase() === cat.toLowerCase()) === idx
+      ),
   ];
 
   const filteredAdminProducts = products.filter((p) => {
@@ -2349,6 +2475,17 @@ export default function AdminDashboardPage() {
                     </button>
                   );
                 })}
+
+                {/* Add / Manage Category Pill Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold border border-dashed border-[#11241c]/35 bg-[#f4f3ee]/60 text-[#11241c] hover:bg-[#11241c] hover:text-white hover:border-[#11241c] transition cursor-pointer flex items-center gap-1"
+                  title="Create or manage product categories"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Category</span>
+                </button>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -3166,6 +3303,112 @@ export default function AdminDashboardPage() {
         )}
       </main>
 
+      {/* MODAL: MANAGE PRODUCT CATEGORIES */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#d7ded8] shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-[#ebf0ec]">
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-[#11241c]/50 font-semibold">
+                  Catalog Organization
+                </span>
+                <h2 className="font-editorial text-2xl sm:text-3xl font-semibold">
+                  Product Categories
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                className="p-2 rounded-full hover:bg-black/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Create New Category Input */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddCategory(newCategoryName);
+              }}
+              className="space-y-2"
+            >
+              <label className="block text-xs font-semibold text-[#11241c]">
+                Create New Category Tab
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g. Jackets, Panjabi, Polos, Trousers..."
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/60 text-xs focus:outline-none focus:border-[#11241c]"
+                />
+                <button
+                  type="submit"
+                  disabled={!newCategoryName.trim() || savingCategory}
+                  className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{savingCategory ? 'Adding...' : 'Add'}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-[#11241c]/55">
+                New categories immediately appear in the Admin Product Catalog filter bar, Product creation dropdown, and Live Storefront.
+              </p>
+            </form>
+
+            {/* Existing Categories List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              <p className="text-[10px] uppercase tracking-wider text-[#11241c]/50 font-semibold">
+                Active Categories ({configuredCategories.length})
+              </p>
+              <div className="divide-y divide-[#ebf0ec] border border-[#d7ded8] rounded-2xl overflow-hidden bg-[#f4f3ee]/40">
+                {configuredCategories.map((cat) => {
+                  const count = products.filter(
+                    (p) => p.category.toLowerCase() === cat.toLowerCase()
+                  ).length;
+                  return (
+                    <div
+                      key={cat}
+                      className="px-4 py-3 flex items-center justify-between gap-3 text-xs bg-white/80 hover:bg-white transition"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="font-semibold text-[#11241c] truncate">
+                          {cat}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-[#ebf0ec] text-[#11241c]/70 text-[10px] font-semibold">
+                          {count} {count === 1 ? 'piece' : 'pieces'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat)}
+                        disabled={savingCategory || configuredCategories.length <= 1}
+                        className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition cursor-pointer disabled:opacity-30"
+                        title={`Remove ${cat}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#ebf0ec] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: ADD NEW ADMIN */}
       {showAddAdminModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
@@ -3295,26 +3538,63 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Category *</label>
-                  <select
-                    value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] text-sm bg-white"
-                  >
-                    {(
-                      settings?.categories || [
-                        'Jeans',
-                        'Shirts',
-                        'T-shirts',
-                        'Sweaters',
-                        'Winter collection',
-                      ]
-                    ).map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold">Category *</label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowInlineCategoryAdd(!showInlineCategoryAdd)
+                      }
+                      className="text-[11px] font-semibold text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>
+                        {showInlineCategoryAdd ? 'Cancel' : 'Add Category'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {showInlineCategoryAdd ? (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={inlineCategoryName}
+                        onChange={(e) => setInlineCategoryName(e.target.value)}
+                        placeholder="e.g. Jackets, Panjabi, Polos..."
+                        className="flex-1 px-3 py-2 rounded-xl border border-emerald-700 text-xs bg-[#f4f3ee]/50 focus:outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCategory(inlineCategoryName, true);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={!inlineCategoryName.trim() || savingCategory}
+                        onClick={() =>
+                          handleAddCategory(inlineCategoryName, true)
+                        }
+                        className="px-3.5 py-2 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {savingCategory ? '...' : 'Add'}
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={prodCategory}
+                      onChange={(e) => setProdCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] text-sm bg-white"
+                    >
+                      {productCategories
+                        .filter((c) => c !== 'All')
+                        .map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
