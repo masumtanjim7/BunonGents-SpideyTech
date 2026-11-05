@@ -33,6 +33,7 @@ import {
   Truck,
   Save,
   Menu,
+  ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import {
@@ -153,9 +154,11 @@ export default function AdminDashboardPage() {
   const [newAdminPassInput, setNewAdminPassInput] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
-  // Product Catalog Filter & Category Manager State
+  // Product Catalog Filter, Pagination & Category Manager State
   const [adminProdCategory, setAdminProdCategory] = useState('All');
   const [adminProdSearch, setAdminProdSearch] = useState('');
+  const [adminProdPage, setAdminProdPage] = useState(1);
+  const [adminProdPerPage, setAdminProdPerPage] = useState(4);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [savingCategory, setSavingCategory] = useState(false);
@@ -1352,6 +1355,17 @@ export default function AdminDashboardPage() {
       (p.badge || '').toLowerCase().includes(adminProdSearch.toLowerCase());
     return matchesCat && matchesSearch;
   });
+
+  const totalAdminProdPages = Math.max(
+    1,
+    Math.ceil(filteredAdminProducts.length / adminProdPerPage)
+  );
+  const safeAdminProdPage = Math.min(adminProdPage, totalAdminProdPages);
+  const adminProdStartIndex = (safeAdminProdPage - 1) * adminProdPerPage;
+  const paginatedAdminProducts = filteredAdminProducts.slice(
+    adminProdStartIndex,
+    adminProdStartIndex + adminProdPerPage
+  );
 
   const navGroups: {
     groupLabel: string;
@@ -2605,7 +2619,10 @@ export default function AdminDashboardPage() {
                   return (
                     <button
                       key={cat}
-                      onClick={() => setAdminProdCategory(cat)}
+                      onClick={() => {
+                        setAdminProdCategory(cat);
+                        setAdminProdPage(1);
+                      }}
                       className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
                         adminProdCategory === cat
                           ? 'bg-[#11241c] text-white'
@@ -2644,7 +2661,10 @@ export default function AdminDashboardPage() {
                   <input
                     type="text"
                     value={adminProdSearch}
-                    onChange={(e) => setAdminProdSearch(e.target.value)}
+                    onChange={(e) => {
+                      setAdminProdSearch(e.target.value);
+                      setAdminProdPage(1);
+                    }}
                     placeholder="Search piece title..."
                     className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#d7ded8] text-xs focus:outline-none focus:border-[#11241c]"
                   />
@@ -2664,83 +2684,174 @@ export default function AdminDashboardPage() {
                 No products match the selected filter.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredAdminProducts.map((p) => {
-                  const totalPhotos =
-                    (p.image ? 1 : 0) + (p.gallery ? p.gallery.length : 0);
-                  return (
-                    <div
-                      key={p._id}
-                      className="bg-white rounded-2xl p-3.5 border border-[#d7ded8] shadow-xs flex flex-col justify-between hover:border-[#11241c]/30 transition"
-                    >
-                      <div>
-                        <div className="relative h-56 rounded-xl overflow-hidden bg-[#ebf0ec] mb-3">
-                          <img
-                            src={p.image}
-                            alt={p.title}
-                            className="w-full h-full object-cover"
-                          />
-                          {p.badge && (
-                            <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-white/90 text-[9px] font-bold uppercase tracking-wider shadow-2xs">
-                              {p.badge}
-                            </span>
-                          )}
-                          {totalPhotos > 1 && (
-                            <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs">
-                              <ImageIcon className="w-3 h-3" />
-                              <span>{totalPhotos}</span>
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] uppercase tracking-widest text-[#11241c]/50 font-semibold">
-                          {p.category}
-                        </p>
-                        <h3 className="font-editorial text-2xl font-semibold text-[#11241c] truncate">
-                          {p.title}
-                        </h3>
-                        <div className="flex items-center justify-between mt-1.5">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm font-bold font-mono">
-                              {formatBDT(p.price)}
-                            </span>
-                            {p.originalPrice && p.originalPrice > p.price && (
-                              <span className="text-[11px] text-[#11241c]/40 line-through font-mono">
-                                {formatBDT(p.originalPrice)}
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {paginatedAdminProducts.map((p) => {
+                    const totalPhotos =
+                      (p.image ? 1 : 0) + (p.gallery ? p.gallery.length : 0);
+                    return (
+                      <div
+                        key={p._id}
+                        className="bg-white rounded-2xl p-3.5 border border-[#d7ded8] shadow-xs flex flex-col justify-between hover:border-[#11241c]/30 transition"
+                      >
+                        <div>
+                          <div className="relative h-56 rounded-xl overflow-hidden bg-[#ebf0ec] mb-3">
+                            <img
+                              src={p.image}
+                              alt={p.title}
+                              className="w-full h-full object-cover"
+                            />
+                            {p.badge && (
+                              <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-white/90 text-[9px] font-bold uppercase tracking-wider shadow-2xs">
+                                {p.badge}
+                              </span>
+                            )}
+                            {totalPhotos > 1 && (
+                              <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs">
+                                <ImageIcon className="w-3 h-3" />
+                                <span>{totalPhotos}</span>
                               </span>
                             )}
                           </div>
-                          <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                              p.inStock
-                                ? 'bg-emerald-50 text-emerald-800'
-                                : 'bg-red-50 text-red-700'
-                            }`}
+                          <p className="text-[10px] uppercase tracking-widest text-[#11241c]/50 font-semibold">
+                            {p.category}
+                          </p>
+                          <h3 className="font-editorial text-2xl font-semibold text-[#11241c] truncate">
+                            {p.title}
+                          </h3>
+                          <div className="flex items-center justify-between mt-1.5">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-sm font-bold font-mono">
+                                {formatBDT(p.price)}
+                              </span>
+                              {p.originalPrice && p.originalPrice > p.price && (
+                                <span className="text-[11px] text-[#11241c]/40 line-through font-mono">
+                                  {formatBDT(p.originalPrice)}
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                p.inStock
+                                  ? 'bg-emerald-50 text-emerald-800'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {p.inStock ? `Stock: ${p.stock}` : 'Out of Stock'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[#ebf0ec]">
+                          <button
+                            onClick={() => openEditProduct(p)}
+                            className="flex-1 py-2 rounded-lg bg-[#f4f3ee] hover:bg-[#11241c] hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                           >
-                            {p.inStock ? `Stock: ${p.stock}` : 'Out of Stock'}
-                          </span>
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit Piece</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p._id)}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition cursor-pointer"
+                            title="Delete product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[#ebf0ec]">
+                {/* Admin Products Responsive Pagination Bar */}
+                <div className="bg-white p-4 rounded-2xl border border-[#d7ded8] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-[#11241c]/70">
+                    <span>
+                      Showing{' '}
+                      <strong className="text-[#11241c]">
+                        {adminProdStartIndex + 1}–
+                        {Math.min(
+                          adminProdStartIndex + adminProdPerPage,
+                          filteredAdminProducts.length
+                        )}
+                      </strong>{' '}
+                      of{' '}
+                      <strong className="text-[#11241c]">
+                        {filteredAdminProducts.length}
+                      </strong>{' '}
+                      pieces
+                    </span>
+
+                    <div className="inline-flex items-center gap-1 bg-[#f4f3ee] p-1 rounded-full border border-[#d7ded8] text-[11px]">
+                      {[4, 8, 12].map((sz) => (
                         <button
-                          onClick={() => openEditProduct(p)}
-                          className="flex-1 py-2 rounded-lg bg-[#f4f3ee] hover:bg-[#11241c] hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          key={sz}
+                          type="button"
+                          onClick={() => {
+                            setAdminProdPerPage(sz);
+                            setAdminProdPage(1);
+                          }}
+                          className={`px-2.5 py-0.5 rounded-full font-semibold transition cursor-pointer ${
+                            adminProdPerPage === sz
+                              ? 'bg-[#11241c] text-white'
+                              : 'text-[#11241c]/65 hover:text-[#11241c]'
+                          }`}
                         >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Edit Piece</span>
+                          {sz} / page
                         </button>
-                        <button
-                          onClick={() => handleDeleteProduct(p._id)}
-                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition cursor-pointer"
-                          title="Delete product"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-1.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAdminProdPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={safeAdminProdPage <= 1}
+                      className="px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-[#f4f3ee] text-xs font-semibold text-[#11241c] hover:border-[#11241c] disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Prev</span>
+                    </button>
+
+                    <div className="flex items-center gap-1 px-1">
+                      {Array.from(
+                        { length: totalAdminProdPages },
+                        (_, idx) => idx + 1
+                      ).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setAdminProdPage(pageNum)}
+                          className={`w-9 h-9 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center ${
+                            safeAdminProdPage === pageNum
+                              ? 'bg-[#11241c] text-white shadow-xs'
+                              : 'bg-[#f4f3ee] text-[#11241c]/75 border border-[#d7ded8] hover:border-[#11241c]'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAdminProdPage((prev) =>
+                          Math.min(totalAdminProdPages, prev + 1)
+                        )
+                      }
+                      disabled={safeAdminProdPage >= totalAdminProdPages}
+                      className="px-3.5 py-2 rounded-xl border border-[#d7ded8] bg-[#f4f3ee] text-xs font-semibold text-[#11241c] hover:border-[#11241c] disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}

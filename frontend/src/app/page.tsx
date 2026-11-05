@@ -14,6 +14,7 @@ import {
   User,
   Menu,
   X,
+  ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import {
@@ -208,6 +209,8 @@ export default function HomePage() {
     useState<CollectionItem[]>(FALLBACK_COLLECTIONS);
   const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [activeCategory, setActiveCategory] = useState<string>('All pieces');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [productsPerPage, setProductsPerPage] = useState<number>(4);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -276,6 +279,23 @@ export default function HomePage() {
       : products.filter(
           (p) => p.category.toLowerCase() === activeCategory.toLowerCase()
         );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / productsPerPage)
+  );
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * productsPerPage;
+  const paginatedProducts = filteredProducts.slice(
+    startIndex,
+    startIndex + productsPerPage
+  );
+
+  const handlePageChange = (newPage: number) => {
+    const target = Math.max(1, Math.min(totalPages, newPage));
+    setCurrentPage(target);
+    document.getElementById('shop-men')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f3ee] text-[#11241c]">
@@ -739,7 +759,10 @@ export default function HomePage() {
               return (
                 <button
                   key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => {
+                    setActiveCategory(cat);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer border ${
                     active
                       ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
@@ -754,7 +777,7 @@ export default function HomePage() {
 
           {/* Product Grid (4 columns on desktop matching screenshot) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
+            {paginatedProducts.map((product) => (
               <div
                 key={product._id}
                 className="group bg-[#f4f3ee] rounded-2xl p-3 border border-[#dce3de] shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between"
@@ -823,6 +846,93 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          {/* Mobile & Desktop Responsive Pagination Bar */}
+          {filteredProducts.length > 0 && (
+            <div className="mt-8 pt-5 border-t border-[#cfd9d2] flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Showing count & per-page selector */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-[#11241c]/70">
+                <span>
+                  Showing{' '}
+                  <strong className="text-[#11241c]">
+                    {startIndex + 1}–
+                    {Math.min(
+                      startIndex + productsPerPage,
+                      filteredProducts.length
+                    )}
+                  </strong>{' '}
+                  of{' '}
+                  <strong className="text-[#11241c]">
+                    {filteredProducts.length}
+                  </strong>{' '}
+                  pieces
+                </span>
+                <div className="inline-flex items-center gap-1 bg-[#f4f3ee] p-1 rounded-full border border-[#cfd9d2] text-[11px]">
+                  {[4, 8].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        setProductsPerPage(size);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-2.5 py-0.5 rounded-full font-semibold transition cursor-pointer ${
+                        productsPerPage === size
+                          ? 'bg-[#11241c] text-white'
+                          : 'text-[#11241c]/65 hover:text-[#11241c]'
+                      }`}
+                    >
+                      {size} / page
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Page Controls */}
+              <div className="flex items-center justify-center gap-1.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(safePage - 1)}
+                  disabled={safePage <= 1}
+                  className="px-3.5 py-2 rounded-full border border-[#c6d1c9] bg-[#f4f3ee] text-xs font-semibold text-[#11241c] hover:border-[#11241c] disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 transition cursor-pointer"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
+                </button>
+
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+                    (pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-9 h-9 rounded-full text-xs font-bold transition cursor-pointer flex items-center justify-center ${
+                          safePage === pageNum
+                            ? 'bg-[#11241c] text-white shadow-xs'
+                            : 'bg-[#f4f3ee] text-[#11241c]/75 border border-[#c6d1c9] hover:border-[#11241c]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(safePage + 1)}
+                  disabled={safePage >= totalPages}
+                  className="px-3.5 py-2 rounded-full border border-[#c6d1c9] bg-[#f4f3ee] text-xs font-semibold text-[#11241c] hover:border-[#11241c] disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 transition cursor-pointer"
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Winter Feature Banner inside Section 02 */}
           <div className="mt-12 relative rounded-3xl overflow-hidden min-h-[300px] sm:min-h-[340px] bg-[#0d1d16] text-white p-8 sm:p-14 flex items-center shadow-xl">
