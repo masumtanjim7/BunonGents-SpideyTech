@@ -597,7 +597,7 @@ export default function HomePage() {
         <div className="relative z-10 max-w-6xl w-full mx-auto px-4 sm:px-8 pb-6 flex items-center justify-between text-[10px] tracking-[0.2em] uppercase text-white/60">
           <div className="flex items-center gap-4">
             <span className="w-12 h-[1px] bg-white/25 hidden sm:inline-block" />
-            <span>BUNON GENTS / 2025</span>
+            <span>BUNON GENTS / 2026</span>
           </div>
           <a
             href="#collections"
@@ -996,7 +996,7 @@ export default function HomePage() {
           </div>
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-white/45">
-            <p>© 2025 Bunon Gents. All rights reserved.</p>
+            <p>© 2026 Bunon Gents. All rights reserved.</p>
             <p>Clothes for modern men · Made for the everyday.</p>
           </div>
         </div>
