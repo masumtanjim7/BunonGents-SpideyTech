@@ -32,7 +32,7 @@ export default function AuthModal() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Dhaka');
+  const [city, setCity] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,7 +73,7 @@ export default function AuthModal() {
       const endpoint = mode === 'register' ? '/auth/register' : '/auth/login';
       const body =
         mode === 'register'
-          ? { name, email, phone, address, city, password }
+          ? { name, email, phone, address, city: city || 'Dhaka', password }
           : { email, password };
 
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -284,7 +284,7 @@ export default function AuthModal() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Your full name"
+                      placeholder="Enter your full name"
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                     />
                   </div>
@@ -302,7 +302,7 @@ export default function AuthModal() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="Enter your email address (e.g. name@example.com)"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                   />
                 </div>
@@ -321,7 +321,7 @@ export default function AuthModal() {
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="01XXXXXXXXX"
+                        placeholder="Enter mobile number (e.g. 017XXXXXXXX)"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                       />
                     </div>
@@ -338,7 +338,7 @@ export default function AuthModal() {
                           type="text"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          placeholder="House, Road, Area"
+                          placeholder="House, Road, Area / Block"
                           className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                         />
                       </div>
@@ -351,7 +351,7 @@ export default function AuthModal() {
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="Dhaka"
+                        placeholder="e.g. Dhaka"
                         className="w-full px-3 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                       />
                     </div>
@@ -387,7 +387,11 @@ export default function AuthModal() {
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
+                    placeholder={
+                      mode === 'register'
+                        ? 'Create a password (min. 6 characters)'
+                        : 'Enter your account password'
+                    }
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-sm focus:outline-none focus:border-[#11241c]"
                   />
                 </div>

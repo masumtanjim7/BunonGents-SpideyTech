@@ -117,7 +117,7 @@ export default function AdminDashboardPage() {
   );
 
   // Login State
-  const [loginEmail, setLoginEmail] = useState('support@example.com');
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [prodTitle, setProdTitle] = useState('');
   const [prodCategory, setProdCategory] = useState('Shirts');
-  const [prodBadge, setProdBadge] = useState('EVERYDAY ESSENTIAL');
+  const [prodBadge, setProdBadge] = useState('');
   const [prodPrice, setProdPrice] = useState('');
   const [prodOriginalPrice, setProdOriginalPrice] = useState('');
   const [prodDesc, setProdDesc] = useState('');
@@ -176,9 +176,9 @@ export default function AdminDashboardPage() {
   const [prodGallery, setProdGallery] = useState<string[]>([]);
   const [customGalleryUrl, setCustomGalleryUrl] = useState('');
   const [uploadingGalleryImg, setUploadingGalleryImg] = useState(false);
-  const [prodSizes, setProdSizes] = useState('S, M, L, XL, XXL');
-  const [prodColors, setProdColors] = useState('Charcoal, Forest Olive, Warm Cream');
-  const [prodStock, setProdStock] = useState('30');
+  const [prodSizes, setProdSizes] = useState('');
+  const [prodColors, setProdColors] = useState('');
+  const [prodStock, setProdStock] = useState('');
   const [prodInStock, setProdInStock] = useState(true);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
@@ -186,9 +186,9 @@ export default function AdminDashboardPage() {
   // Collection Form State
   const [showColModal, setShowColModal] = useState(false);
   const [editingCol, setEditingCol] = useState<CollectionItem | null>(null);
-  const [colNumberLabel, setColNumberLabel] = useState('01 / AVAILABLE NOW');
+  const [colNumberLabel, setColNumberLabel] = useState('');
   const [colTitle, setColTitle] = useState('');
-  const [colSubtitle, setColSubtitle] = useState('EXPLORE THE COLLECTION →');
+  const [colSubtitle, setColSubtitle] = useState('');
   const [colStatus, setColStatus] = useState<'AVAILABLE NOW' | 'COMING SOON'>(
     'AVAILABLE NOW'
   );
@@ -322,18 +322,22 @@ export default function AdminDashboardPage() {
   const openCreateProduct = () => {
     setEditingProduct(null);
     setProdTitle('');
-    setProdCategory('Shirts');
-    setProdBadge('EVERYDAY ESSENTIAL');
+    setProdCategory(
+      settings?.categories && settings.categories.length > 0
+        ? settings.categories[0]
+        : 'Shirts'
+    );
+    setProdBadge('');
     setProdPrice('');
     setProdOriginalPrice('');
     setProdDesc('');
-    setProdFabric('100% Premium breathable cotton. Machine wash cold.');
+    setProdFabric('');
     setProdImage('');
     setProdGallery([]);
     setCustomGalleryUrl('');
-    setProdSizes('S, M, L, XL, XXL');
-    setProdColors('Charcoal, Forest Olive, Warm Cream');
-    setProdStock('25');
+    setProdSizes('');
+    setProdColors('');
+    setProdStock('');
     setProdInStock(true);
     setShowProductModal(true);
   };
@@ -365,6 +369,45 @@ export default function AdminDashboardPage() {
 
   const handleRemoveGalleryImage = (idx: number) => {
     setProdGallery((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const STANDARD_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+
+  const selectedSizesArray = prodSizes
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const toggleProductSize = (size: string) => {
+    const exists = selectedSizesArray.some(
+      (s) => s.toUpperCase() === size.toUpperCase()
+    );
+    let updated: string[];
+    if (exists) {
+      updated = selectedSizesArray.filter(
+        (s) => s.toUpperCase() !== size.toUpperCase()
+      );
+    } else {
+      const next = [...selectedSizesArray, size];
+      updated = [
+        ...STANDARD_SIZES.filter((std) =>
+          next.some((n) => n.toUpperCase() === std)
+        ),
+        ...next.filter((n) => !STANDARD_SIZES.includes(n.toUpperCase())),
+      ];
+    }
+    setProdSizes(updated.join(', '));
+  };
+
+  const toggleAllStandardSizes = () => {
+    const allSelected = STANDARD_SIZES.every((std) =>
+      selectedSizesArray.some((s) => s.toUpperCase() === std)
+    );
+    if (allSelected) {
+      setProdSizes('');
+    } else {
+      setProdSizes(STANDARD_SIZES.join(', '));
+    }
   };
 
   const handleSetGalleryAsPrimary = (idx: number) => {
@@ -431,22 +474,28 @@ export default function AdminDashboardPage() {
       const payload = {
         title: prodTitle,
         category: prodCategory,
-        badge: prodBadge,
+        badge: prodBadge || 'EVERYDAY ESSENTIAL',
         price: Number(prodPrice),
         originalPrice: prodOriginalPrice ? Number(prodOriginalPrice) : null,
         description: prodDesc,
-        fabricAndCare: prodFabric,
+        fabricAndCare:
+          prodFabric ||
+          '100% Premium breathable cotton. Machine wash cold.',
         image: primaryImg,
         gallery: prodGallery.filter(Boolean),
-        sizes: prodSizes
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
-        colors: prodColors
-          .split(',')
-          .map((c) => c.trim())
-          .filter(Boolean),
-        stock: Number(prodStock),
+        sizes: prodSizes.trim()
+          ? prodSizes
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : ['S', 'M', 'L', 'XL', 'XXL'],
+        colors: prodColors.trim()
+          ? prodColors
+              .split(',')
+              .map((c) => c.trim())
+              .filter(Boolean)
+          : ['Charcoal', 'Forest Olive', 'Warm Cream'],
+        stock: prodStock ? Number(prodStock) : 25,
         inStock: prodInStock,
       };
 
@@ -632,9 +681,9 @@ export default function AdminDashboardPage() {
       setColOrder(String(c.order || 1));
     } else {
       setEditingCol(null);
-      setColNumberLabel('04 / IN THE MAKING');
+      setColNumberLabel('');
       setColTitle('');
-      setColSubtitle('EXPLORE THE COLLECTION →');
+      setColSubtitle('');
       setColStatus('AVAILABLE NOW');
       setColImage('');
       setColOrder(String(collections.length + 1));
@@ -647,9 +696,11 @@ export default function AdminDashboardPage() {
     if (!token) return;
     try {
       const payload = {
-        numberLabel: colNumberLabel,
+        numberLabel:
+          colNumberLabel.trim() ||
+          `0${collections.length + 1} / ${colStatus}`,
         title: colTitle,
-        subtitle: colSubtitle,
+        subtitle: colSubtitle.trim() || 'EXPLORE THE COLLECTION →',
         status: colStatus,
         image: colImage,
         order: Number(colOrder),
@@ -951,7 +1002,7 @@ export default function AdminDashboardPage() {
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="admin@bunongents.com"
+                  placeholder="Enter admin email (e.g. admin@bunongents.com)"
                   className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
                 />
               </div>
@@ -978,7 +1029,7 @@ export default function AdminDashboardPage() {
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your admin password"
                   className="w-full px-4 py-3 rounded-xl bg-black/25 border border-white/15 text-sm text-white focus:outline-none focus:border-white/50"
                 />
               </div>
@@ -3786,24 +3837,67 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold mb-1">
-                    Sizes (comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={prodSizes}
-                    onChange={(e) => setProdSizes(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] text-sm"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block font-semibold">
+                      Available Sizes
+                    </label>
+                    <button
+                      type="button"
+                      onClick={toggleAllStandardSizes}
+                      className="text-[11px] font-semibold text-emerald-800 hover:underline cursor-pointer"
+                    >
+                      {STANDARD_SIZES.every((std) =>
+                        selectedSizesArray.some((s) => s.toUpperCase() === std)
+                      )
+                        ? 'Clear All'
+                        : 'Select All (S–XXL)'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {STANDARD_SIZES.map((sz) => {
+                      const isChecked = selectedSizesArray.some(
+                        (s) => s.toUpperCase() === sz
+                      );
+                      return (
+                        <label
+                          key={sz}
+                          onClick={() => toggleProductSize(sz)}
+                          className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-bold cursor-pointer select-none transition ${
+                            isChecked
+                              ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
+                              : 'bg-white text-[#11241c]/75 border-[#d7ded8] hover:border-[#11241c]/50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="sr-only"
+                          />
+                          <span
+                            className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none ${
+                              isChecked
+                                ? 'bg-[#e5c158] border-[#e5c158] text-[#11241c]'
+                                : 'border-[#c2ccc5] bg-[#f4f3ee]'
+                            }`}
+                          >
+                            {isChecked ? '✓' : ''}
+                          </span>
+                          <span>{sz}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">
+                  <label className="block font-semibold mb-1.5">
                     Colors (comma separated)
                   </label>
                   <input
                     type="text"
                     value={prodColors}
                     onChange={(e) => setProdColors(e.target.value)}
+                    placeholder="e.g. Charcoal, Forest Olive, Warm Cream"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#d7ded8] text-sm"
                   />
                 </div>
@@ -3815,6 +3909,7 @@ export default function AdminDashboardPage() {
                   rows={2}
                   value={prodDesc}
                   onChange={(e) => setProdDesc(e.target.value)}
+                  placeholder="Describe the fit, fabric feel, and everyday styling details..."
                   className="w-full px-3.5 py-2 rounded-xl border border-[#d7ded8] text-sm"
                 />
               </div>
@@ -3828,6 +3923,7 @@ export default function AdminDashboardPage() {
                     type="number"
                     value={prodStock}
                     onChange={(e) => setProdStock(e.target.value)}
+                    placeholder="e.g. 25"
                     className="w-full px-3.5 py-2 rounded-xl border border-[#d7ded8] text-sm"
                   />
                 </div>
@@ -3925,6 +4021,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   value={colSubtitle}
                   onChange={(e) => setColSubtitle(e.target.value)}
+                  placeholder="e.g. EXPLORE THE COLLECTION →"
                   className="w-full px-3.5 py-2 rounded-xl border border-[#d7ded8] text-sm"
                 />
               </div>
@@ -3938,6 +4035,7 @@ export default function AdminDashboardPage() {
                     type="text"
                     value={colImage}
                     onChange={(e) => setColImage(e.target.value)}
+                    placeholder="Paste image URL (https://...) or upload via ImgBB"
                     className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] text-sm"
                   />
                   <label className="px-4 py-2 rounded-xl bg-[#11241c] text-white font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0">

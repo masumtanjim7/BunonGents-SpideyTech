@@ -28,7 +28,7 @@ export default function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Dhaka');
+  const [city, setCity] = useState('');
   const [area, setArea] = useState('');
   const [deliveryZone, setDeliveryZone] = useState<'Inside Dhaka' | 'Outside Dhaka'>(
     'Inside Dhaka'
@@ -110,7 +110,7 @@ export default function CheckoutPage() {
           customerEmail,
           shippingAddress: {
             address,
-            city,
+            city: city || 'Dhaka',
             area,
             deliveryZone,
             notes,
