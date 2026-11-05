@@ -97,108 +97,15 @@ const FALLBACK_COLLECTIONS: CollectionItem[] = [
   },
 ];
 
-const FALLBACK_PRODUCTS: Product[] = [
-  {
-    _id: 'p1',
-    title: 'Everyday Denim',
-    slug: 'everyday-denim',
-    category: 'Jeans',
-    badge: 'EVERYDAY ESSENTIAL',
-    price: 2250,
-    originalPrice: 2650,
-    description:
-      'Crafted from durable mid-weight selvedge-inspired denim with subtle stretch for all-day movement.',
-    fabricAndCare: '98% Organic Cotton, 2% Elastane.',
-    image:
-      'https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=1000&auto=format&fit=crop',
-    gallery: [],
-    sizes: ['30', '32', '34', '36', '38'],
-    colors: ['Indigo Wash', 'Jet Black'],
-    stock: 35,
-    featured: true,
-    inStock: true,
-  },
-  {
-    _id: 'p2',
-    title: 'The Classic Shirt',
-    slug: 'the-classic-shirt',
-    category: 'Shirts',
-    badge: 'EASY POLISH',
-    price: 1850,
-    originalPrice: 2100,
-    description:
-      'Our signature crisp oxford weave shirt designed to take you from morning meetings to evening dinners.',
-    fabricAndCare: '100% Combed Egyptian Cotton.',
-    image:
-      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop',
-    gallery: [],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colors: ['Crisp White', 'Forest Olive'],
-    stock: 42,
-    featured: true,
-    inStock: true,
-  },
-  {
-    _id: 'p3',
-    title: 'Relaxed Tee',
-    slug: 'relaxed-tee',
-    category: 'T-shirts',
-    badge: 'WEAR ON REPEAT',
-    price: 1150,
-    originalPrice: 1390,
-    description:
-      'Heavyweight 240 GSM jersey t-shirt with a relaxed drop-shoulder cut and ribbed crew neck.',
-    fabricAndCare: '100% Ring-Spun Organic Cotton.',
-    image:
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=1000&auto=format&fit=crop',
-    gallery: [],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colors: ['Deep Forest', 'Charcoal Black'],
-    stock: 60,
-    featured: true,
-    inStock: true,
-  },
-  {
-    _id: 'p4',
-    title: 'Weekend Knit',
-    slug: 'weekend-knit',
-    category: 'Sweaters',
-    badge: 'LAYER UP',
-    price: 2450,
-    originalPrice: 2800,
-    description:
-      'Textured stripe crew-neck knit crafted for cool evenings and effortless layering.',
-    fabricAndCare: '85% Fine Cotton, 15% Merino Wool.',
-    image:
-      'https://images.unsplash.com/photo-1610652492500-ded49ceeb378?q=80&w=1000&auto=format&fit=crop',
-    gallery: [],
-    sizes: ['M', 'L', 'XL', 'XXL'],
-    colors: ['Espresso Stripe', 'Oatmeal'],
-    stock: 22,
-    featured: true,
-    inStock: true,
-  },
-  {
-    _id: 'p5',
-    title: 'Cold Day Coat',
-    slug: 'cold-day-coat',
-    category: 'Winter collection',
-    badge: 'WINTER COLLECTION',
-    price: 4200,
-    originalPrice: 4950,
-    description:
-      'Statement tailored herringbone overcoat engineered for warmth and unmistakable presence.',
-    fabricAndCare: 'Wool-blend herringbone outer.',
-    image:
-      'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1000&auto=format&fit=crop',
-    gallery: [],
-    sizes: ['M', 'L', 'XL'],
-    colors: ['Herringbone Charcoal'],
-    stock: 15,
-    featured: true,
-    inStock: true,
-  },
+const DEMO_PRODUCT_SLUGS = [
+  'everyday-denim',
+  'the-classic-shirt',
+  'relaxed-tee',
+  'weekend-knit',
+  'cold-day-coat',
 ];
+
+const FALLBACK_PRODUCTS: Product[] = [];
 
 export default function HomePage() {
   const { openCart, addToCart, totalItems } = useCart();
@@ -244,7 +151,11 @@ export default function HomePage() {
         }
         if (prodRes.ok) {
           const p = await prodRes.json();
-          if (Array.isArray(p) && p.length > 0) setProducts(p);
+          if (Array.isArray(p)) {
+            setProducts(
+              p.filter((item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug))
+            );
+          }
         }
       } catch {
         // Fallback data already initialized
@@ -776,76 +687,87 @@ export default function HomePage() {
           </div>
 
           {/* Product Grid (4 columns on desktop matching screenshot) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {paginatedProducts.map((product) => (
-              <div
-                key={product._id}
-                className="group bg-[#f4f3ee] rounded-2xl p-3 border border-[#dce3de] shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between"
-              >
-                {/* Image Container */}
+          {filteredProducts.length === 0 ? (
+            <div className="rounded-2xl bg-[#f4f3ee] border border-[#dce3de] p-12 text-center">
+              <p className="font-editorial text-2xl text-[#11241c] mb-1">
+                No pieces in this collection yet.
+              </p>
+              <p className="text-xs text-[#11241c]/60">
+                New menswear pieces added from the Admin Panel will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {paginatedProducts.map((product) => (
                 <div
-                  onClick={() => setSelectedProduct(product)}
-                  className="relative h-[300px] sm:h-[310px] rounded-xl overflow-hidden bg-[#dfe6e1] cursor-pointer"
+                  key={product._id}
+                  className="group bg-[#f4f3ee] rounded-2xl p-3 border border-[#dce3de] shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between"
                 >
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                  />
-                  {product.gallery && product.gallery.length > 0 && (
-                    <img
-                      src={product.gallery[0]}
-                      alt={`${product.title} alternate`}
-                      className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    />
-                  )}
-                  {product.badge && (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#f4f3ee]/95 text-[#11241c] text-[9px] font-semibold uppercase tracking-[0.16em] shadow-xs z-10">
-                      {product.badge}
-                    </span>
-                  )}
-                </div>
-
-                {/* Card Details */}
-                <div className="pt-4 pb-1 px-1 flex flex-col justify-between flex-1">
+                  {/* Image Container */}
                   <div
                     onClick={() => setSelectedProduct(product)}
-                    className="cursor-pointer"
+                    className="relative h-[300px] sm:h-[310px] rounded-xl overflow-hidden bg-[#dfe6e1] cursor-pointer"
                   >
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-[#11241c]/50 font-semibold">
-                      {product.category}
-                    </p>
-                    <h3 className="font-editorial text-2xl text-[#11241c] font-medium mt-0.5 group-hover:text-[#1b3b2b] transition-colors">
-                      {product.title}
-                    </h3>
+                    <img
+                      src={product.image}
+                      alt={product.title}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {product.gallery && product.gallery.length > 0 && (
+                      <img
+                        src={product.gallery[0]}
+                        alt={`${product.title} alternate`}
+                        className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      />
+                    )}
+                    {product.badge && (
+                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#f4f3ee]/95 text-[#11241c] text-[9px] font-semibold uppercase tracking-[0.16em] shadow-xs z-10">
+                        {product.badge}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between mt-3 pt-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-bold text-[#11241c]">
-                        {formatBDT(product.price)}
-                      </span>
-                      {product.originalPrice &&
-                        product.originalPrice > product.price && (
-                          <span className="text-[11px] text-[#11241c]/40 line-through">
-                            {formatBDT(product.originalPrice)}
-                          </span>
-                        )}
+                  {/* Card Details */}
+                  <div className="pt-4 pb-1 px-1 flex flex-col justify-between flex-1">
+                    <div
+                      onClick={() => setSelectedProduct(product)}
+                      className="cursor-pointer"
+                    >
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-[#11241c]/50 font-semibold">
+                        {product.category}
+                      </p>
+                      <h3 className="font-editorial text-2xl text-[#11241c] font-medium mt-0.5 group-hover:text-[#1b3b2b] transition-colors">
+                        {product.title}
+                      </h3>
                     </div>
 
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="w-8 h-8 rounded-full border border-[#cdd6d0] bg-white text-[#11241c] flex items-center justify-center hover:bg-[#11241c] hover:text-white hover:border-[#11241c] transition cursor-pointer"
-                      title="Quick add to bag"
-                      aria-label={`Add ${product.title} to bag`}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-between mt-3 pt-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-bold text-[#11241c]">
+                          {formatBDT(product.price)}
+                        </span>
+                        {product.originalPrice &&
+                          product.originalPrice > product.price && (
+                            <span className="text-[11px] text-[#11241c]/40 line-through">
+                              {formatBDT(product.originalPrice)}
+                            </span>
+                          )}
+                      </div>
+
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="w-8 h-8 rounded-full border border-[#cdd6d0] bg-white text-[#11241c] flex items-center justify-center hover:bg-[#11241c] hover:text-white hover:border-[#11241c] transition cursor-pointer"
+                        title="Quick add to bag"
+                        aria-label={`Add ${product.title} to bag`}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Mobile & Desktop Responsive Pagination Bar */}
           {filteredProducts.length > 0 && (

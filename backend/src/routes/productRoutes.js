@@ -15,6 +15,19 @@ const createSlug = (title) =>
 // GET /api/products
 router.get('/', async (req, res) => {
   try {
+    // Ensure legacy demo products never reappear
+    await Product.deleteMany({
+      slug: {
+        $in: [
+          'everyday-denim',
+          'the-classic-shirt',
+          'relaxed-tee',
+          'weekend-knit',
+          'cold-day-coat',
+        ],
+      },
+    });
+
     const { category, search, featured } = req.query;
     const filter = {};
 

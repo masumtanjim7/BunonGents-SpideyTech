@@ -286,7 +286,26 @@ export default function AdminDashboardPage() {
       }
 
       if (statsRes.ok) setStats(await statsRes.json());
-      if (prodRes.ok) setProducts(await prodRes.json());
+      if (prodRes.ok) {
+        const rawProds: Product[] = await prodRes.json();
+        const demoSlugs = [
+          'everyday-denim',
+          'the-classic-shirt',
+          'relaxed-tee',
+          'weekend-knit',
+          'cold-day-coat',
+        ];
+        const demoItems = rawProds.filter((p) => demoSlugs.includes(p.slug));
+        if (demoItems.length > 0) {
+          demoItems.forEach((dp) => {
+            fetch(`${API_URL}/products/${dp._id}`, {
+              method: 'DELETE',
+              headers,
+            }).catch(() => {});
+          });
+        }
+        setProducts(rawProds.filter((p) => !demoSlugs.includes(p.slug)));
+      }
       if (colRes.ok) setCollections(await colRes.json());
       if (ordRes.ok) setOrders(await ordRes.json());
       if (setRes.ok) setSettings(await setRes.json());
@@ -4043,21 +4062,16 @@ export default function AdminDashboardPage() {
                       prodBadge.trim().toUpperCase() ===
                       badgeLabel.toUpperCase();
                     return (
-                      <label
+                      <button
                         key={badgeLabel}
+                        type="button"
                         onClick={() => handleSelectSingleBadge(badgeLabel)}
-                        className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none transition ${
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none transition text-left ${
                           isSelected
                             ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
                             : 'bg-white text-[#11241c]/75 border-[#d7ded8] hover:border-[#11241c]/45'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}}
-                          className="sr-only"
-                        />
                         <span
                           className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none shrink-0 ${
                             isSelected
@@ -4068,7 +4082,7 @@ export default function AdminDashboardPage() {
                           {isSelected ? '✓' : ''}
                         </span>
                         <span className="truncate">{badgeLabel}</span>
-                      </label>
+                      </button>
                     );
                   })}
                 </div>
@@ -4270,8 +4284,9 @@ export default function AdminDashboardPage() {
                       (s) => s.toUpperCase() === sz
                     );
                     return (
-                      <label
+                      <button
                         key={sz}
+                        type="button"
                         onClick={() => toggleProductSize(sz)}
                         className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-bold cursor-pointer select-none transition ${
                           isChecked
@@ -4279,12 +4294,6 @@ export default function AdminDashboardPage() {
                             : 'bg-white text-[#11241c]/75 border-[#d7ded8] hover:border-[#11241c]/50'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {}}
-                          className="sr-only"
-                        />
                         <span
                           className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none ${
                             isChecked
@@ -4295,7 +4304,7 @@ export default function AdminDashboardPage() {
                           {isChecked ? '✓' : ''}
                         </span>
                         <span>{sz}</span>
-                      </label>
+                      </button>
                     );
                   })}
                 </div>
@@ -4440,22 +4449,17 @@ export default function AdminDashboardPage() {
                       (c) => c.toLowerCase() === colObj.name.toLowerCase()
                     );
                     return (
-                      <label
+                      <button
                         key={colObj.name}
+                        type="button"
                         onClick={() => toggleProductColor(colObj.name)}
-                        className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer select-none transition ${
+                        className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer select-none transition text-left ${
                           isChecked
                             ? 'bg-[#11241c] text-white border-[#11241c] shadow-xs'
                             : 'bg-white text-[#11241c]/80 border-[#d7ded8] hover:border-[#11241c]/45'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {}}
-                            className="sr-only"
-                          />
                           <span
                             className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] leading-none shrink-0 ${
                               isChecked
@@ -4471,7 +4475,7 @@ export default function AdminDashboardPage() {
                           className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
                           style={{ backgroundColor: colObj.hex }}
                         />
-                      </label>
+                      </button>
                     );
                   })}
                 </div>
