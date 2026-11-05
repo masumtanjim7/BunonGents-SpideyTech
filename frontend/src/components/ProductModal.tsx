@@ -12,9 +12,18 @@ import {
   ChevronRight,
   Plus,
   Minus,
+  Ruler,
 } from 'lucide-react';
 import { Product, formatBDT } from '@/lib/api';
 import { useCart } from '@/context/CartContext';
+
+const DEFAULT_SIZE_MEASUREMENTS: Record<string, { chest: string; length: string }> = {
+  S: { chest: '38', length: '27' },
+  M: { chest: '40', length: '28' },
+  L: { chest: '42', length: '29' },
+  XL: { chest: '44', length: '30' },
+  XXL: { chest: '46', length: '31' },
+};
 
 interface ProductModalProps {
   product: Product | null;
@@ -29,6 +38,7 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
   const [added, setAdded] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [showSizeChart, setShowSizeChart] = useState(false);
 
   const allImages = useMemo(() => {
     if (!product) return [];
@@ -44,6 +54,7 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
       setQuantity(1);
       setAdded(false);
       setActiveImageIndex(0);
+      setShowSizeChart(false);
     } else {
       document.body.style.overflow = '';
     }
@@ -229,9 +240,23 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
             {/* Sizes */}
             {product.sizes && product.sizes.length > 0 && (
               <div className="mt-4 sm:mt-5">
-                <label className="block text-[10px] sm:text-[11px] uppercase tracking-widest font-semibold text-[#11241c]/70 mb-2">
-                  Select Size
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="block text-[10px] sm:text-[11px] uppercase tracking-widest font-semibold text-[#11241c]/70">
+                    Select Size
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeChart((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold transition cursor-pointer border ${
+                      showSizeChart
+                        ? 'bg-[#11241c] text-[#f4f3ee] border-[#11241c]'
+                        : 'bg-white text-[#11241c] border-[#d7ded8] hover:border-[#11241c]'
+                    }`}
+                  >
+                    <Ruler className="w-3 h-3" />
+                    {showSizeChart ? 'Hide Size Chart' : 'See Size Chart'}
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {product.sizes.map((size) => (
                     <button
@@ -248,6 +273,100 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
                     </button>
                   ))}
                 </div>
+
+                {/* Collapsible Size Chart Table (X-axis = Available Sizes, Y-axis = Chest & Length) */}
+                {showSizeChart && (
+                  <div className="mt-3 rounded-2xl bg-white border border-[#d7ded8] overflow-hidden shadow-xs">
+                    <div className="px-3.5 py-2 bg-[#ebf0ec] border-b border-[#d7ded8] flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-[#11241c]/80 flex items-center gap-1.5">
+                        <Ruler className="w-3 h-3 text-[#11241c]" />
+                        Size Guide (Inches)
+                      </span>
+                      <span className="text-[10px] text-[#11241c]/55">
+                        Tap a size column to select
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-center border-collapse">
+                        <thead>
+                          <tr className="border-b border-[#e5e9e5] bg-[#f8f7f3]">
+                            <th className="py-2 px-3 text-left text-[10px] uppercase tracking-wider font-bold text-[#11241c]/65 border-r border-[#e5e9e5]">
+                              Size
+                            </th>
+                            {product.sizes.map((size) => {
+                              const isCurrent = selectedSize === size;
+                              return (
+                                <th
+                                  key={size}
+                                  onClick={() => setSelectedSize(size)}
+                                  className={`py-2 px-2.5 font-bold cursor-pointer transition ${
+                                    isCurrent
+                                      ? 'bg-[#11241c] text-[#f4f3ee]'
+                                      : 'text-[#11241c] hover:bg-[#ebf0ec]'
+                                  }`}
+                                >
+                                  {size}
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#e5e9e5]">
+                          <tr>
+                            <td className="py-2 px-3 text-left font-semibold text-[#11241c] bg-[#f8f7f3]/60 border-r border-[#e5e9e5] whitespace-nowrap">
+                              Chest <span className="text-[10px] font-normal text-[#11241c]/50">(in)</span>
+                            </td>
+                            {product.sizes.map((size) => {
+                              const chestVal =
+                                product.sizeChart?.[size]?.chest?.trim() ||
+                                DEFAULT_SIZE_MEASUREMENTS[size]?.chest ||
+                                '—';
+                              const isCurrent = selectedSize === size;
+                              return (
+                                <td
+                                  key={size}
+                                  onClick={() => setSelectedSize(size)}
+                                  className={`py-2 px-2.5 font-mono cursor-pointer transition ${
+                                    isCurrent
+                                      ? 'bg-[#11241c]/10 font-bold text-[#11241c]'
+                                      : 'text-[#11241c]/80 hover:bg-[#f8f7f3]'
+                                  }`}
+                                >
+                                  {chestVal !== '—' ? `${chestVal}"` : '—'}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 text-left font-semibold text-[#11241c] bg-[#f8f7f3]/60 border-r border-[#e5e9e5] whitespace-nowrap">
+                              Length <span className="text-[10px] font-normal text-[#11241c]/50">(in)</span>
+                            </td>
+                            {product.sizes.map((size) => {
+                              const lengthVal =
+                                product.sizeChart?.[size]?.length?.trim() ||
+                                DEFAULT_SIZE_MEASUREMENTS[size]?.length ||
+                                '—';
+                              const isCurrent = selectedSize === size;
+                              return (
+                                <td
+                                  key={size}
+                                  onClick={() => setSelectedSize(size)}
+                                  className={`py-2 px-2.5 font-mono cursor-pointer transition ${
+                                    isCurrent
+                                      ? 'bg-[#11241c]/10 font-bold text-[#11241c]'
+                                      : 'text-[#11241c]/80 hover:bg-[#f8f7f3]'
+                                  }`}
+                                >
+                                  {lengthVal !== '—' ? `${lengthVal}"` : '—'}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

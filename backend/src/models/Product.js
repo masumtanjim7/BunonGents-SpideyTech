@@ -51,6 +51,10 @@ const productSchema = new mongoose.Schema(
       type: [String],
       default: ['S', 'M', 'L', 'XL', 'XXL'],
     },
+    sizeChart: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     colors: {
       type: [String],
       default: ['Charcoal', 'Forest Green', 'Warm Cream'],

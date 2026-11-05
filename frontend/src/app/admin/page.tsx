@@ -35,6 +35,10 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Printer,
+  Download,
+  FileText,
+  Ruler,
 } from 'lucide-react';
 import {
   API_URL,
@@ -46,6 +50,12 @@ import {
   formatBDT,
   uploadImageToImgBB,
 } from '@/lib/api';
+import {
+  downloadOrderInvoicePDF,
+  printThemedOrderInvoice,
+  exportSteadfastCSV,
+  exportPathaoCSV,
+} from '@/lib/invoiceGenerator';
 import BrandLogo from '@/components/BrandLogo';
 
 type AdminTab =
@@ -180,6 +190,9 @@ export default function AdminDashboardPage() {
   const [customGalleryUrl, setCustomGalleryUrl] = useState('');
   const [uploadingGalleryImg, setUploadingGalleryImg] = useState(false);
   const [prodSizes, setProdSizes] = useState('');
+  const [prodSizeChart, setProdSizeChart] = useState<
+    Record<string, { chest: string; length: string }>
+  >({});
   const [prodColors, setProdColors] = useState('');
   const [customBadgeInput, setCustomBadgeInput] = useState('');
   const [customColorInput, setCustomColorInput] = useState('');
@@ -204,6 +217,9 @@ export default function AdminDashboardPage() {
   const [orderFilter, setOrderFilter] = useState('All');
   const [orderSearch, setOrderSearch] = useState('');
   const [selectedOrderModal, setSelectedOrderModal] = useState<Order | null>(
+    null
+  );
+  const [invoiceOrderModal, setInvoiceOrderModal] = useState<Order | null>(
     null
   );
 
@@ -341,6 +357,7 @@ export default function AdminDashboardPage() {
     setProdGallery([]);
     setCustomGalleryUrl('');
     setProdSizes('');
+    setProdSizeChart({});
     setProdColors('');
     setCustomBadgeInput('');
     setCustomColorInput('');
@@ -362,6 +379,16 @@ export default function AdminDashboardPage() {
     setProdGallery(p.gallery || []);
     setCustomGalleryUrl('');
     setProdSizes((p.sizes || []).join(', '));
+    const initialChart: Record<string, { chest: string; length: string }> = {};
+    if (p.sizeChart && typeof p.sizeChart === 'object') {
+      Object.entries(p.sizeChart).forEach(([sz, vals]) => {
+        initialChart[sz] = {
+          chest: vals?.chest || '',
+          length: vals?.length || '',
+        };
+      });
+    }
+    setProdSizeChart(initialChart);
     setProdColors((p.colors || []).join(', '));
     setCustomBadgeInput('');
     setCustomColorInput('');
@@ -417,6 +444,44 @@ export default function AdminDashboardPage() {
     } else {
       setProdSizes(STANDARD_SIZES.join(', '));
     }
+  };
+
+  const STANDARD_SIZE_PRESETS: Record<string, { chest: string; length: string }> = {
+    S: { chest: '38', length: '27' },
+    M: { chest: '40', length: '28' },
+    L: { chest: '42', length: '29' },
+    XL: { chest: '44', length: '30' },
+    XXL: { chest: '46', length: '31' },
+  };
+
+  const handleSizeChartChange = (
+    size: string,
+    field: 'chest' | 'length',
+    val: string
+  ) => {
+    setProdSizeChart((prev) => ({
+      ...prev,
+      [size]: {
+        chest: prev[size]?.chest || '',
+        length: prev[size]?.length || '',
+        [field]: val,
+      },
+    }));
+  };
+
+  const handleAutoFillSizeChart = () => {
+    const targetSizes =
+      selectedSizesArray.length > 0 ? selectedSizesArray : STANDARD_SIZES;
+    const nextChart: Record<string, { chest: string; length: string }> = {
+      ...prodSizeChart,
+    };
+    targetSizes.forEach((sz) => {
+      const upper = sz.toUpperCase();
+      if (STANDARD_SIZE_PRESETS[upper]) {
+        nextChart[sz] = { ...STANDARD_SIZE_PRESETS[upper] };
+      }
+    });
+    setProdSizeChart(nextChart);
   };
 
   // Preset Editorial Badges (Single-Select Only)
@@ -591,6 +656,7 @@ export default function AdminDashboardPage() {
               .map((s) => s.trim())
               .filter(Boolean)
           : ['S', 'M', 'L', 'XL', 'XXL'],
+        sizeChart: prodSizeChart,
         colors: prodColors.trim()
           ? prodColors
               .split(',')
@@ -2131,15 +2197,51 @@ export default function AdminDashboardPage() {
                 })}
               </div>
 
-              <div className="relative w-full md:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#11241c]/40" />
-                <input
-                  type="text"
-                  value={orderSearch}
-                  onChange={(e) => setOrderSearch(e.target.value)}
-                  placeholder="Search Order ID, Phone, TrxID..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#d7ded8] text-xs focus:outline-none focus:border-[#11241c]"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+                <div className="relative flex-1 md:w-60">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#11241c]/40" />
+                  <input
+                    type="text"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    placeholder="Search Order ID, Phone, TrxID..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#d7ded8] text-xs focus:outline-none focus:border-[#11241c]"
+                  />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filteredOrders.length === 0) {
+                        alert('No orders to export.');
+                        return;
+                      }
+                      exportSteadfastCSV(filteredOrders);
+                      showToast(`Exported ${filteredOrders.length} order(s) for Steadfast Courier!`);
+                    }}
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#ebf0ec] hover:bg-[#11241c] text-[#11241c] hover:text-white border border-[#d7ded8] text-xs font-semibold transition cursor-pointer"
+                    title="Export filtered orders for Steadfast Courier bulk CSV upload"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Steadfast CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filteredOrders.length === 0) {
+                        alert('No orders to export.');
+                        return;
+                      }
+                      exportPathaoCSV(filteredOrders, settings?.siteName || 'Bunon Gents');
+                      showToast(`Exported ${filteredOrders.length} order(s) for Pathao Courier!`);
+                    }}
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#ebf0ec] hover:bg-[#11241c] text-[#11241c] hover:text-white border border-[#d7ded8] text-xs font-semibold transition cursor-pointer"
+                    title="Export filtered orders for Pathao Courier bulk CSV upload"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Pathao CSV</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2223,8 +2325,17 @@ export default function AdminDashboardPage() {
                           </select>
 
                           <button
+                            onClick={() => setInvoiceOrderModal(order)}
+                            className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-[#d7ded8] bg-white text-[#11241c] hover:bg-[#ebf0ec] text-xs font-semibold cursor-pointer shrink-0"
+                            title="View & Download Themed Invoice PDF"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Invoice</span>
+                          </button>
+
+                          <button
                             onClick={() => setSelectedOrderModal(order)}
-                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#11241c] text-white text-xs font-medium cursor-pointer shrink-0"
+                            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#11241c] text-white text-xs font-medium cursor-pointer shrink-0"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>View</span>
@@ -2322,13 +2433,33 @@ export default function AdminDashboardPage() {
                               </select>
                             </td>
                             <td className="py-4 px-5 text-right">
-                              <button
-                                onClick={() => setSelectedOrderModal(order)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer hover:bg-[#1c382c] transition"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>View</span>
-                              </button>
+                              <div className="inline-flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setInvoiceOrderModal(order)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#d7ded8] bg-white text-[#11241c] hover:bg-[#ebf0ec] text-xs font-semibold cursor-pointer transition"
+                                  title="Preview & Download Themed PDF Invoice"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>Invoice</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    downloadOrderInvoicePDF(order, settings);
+                                    showToast(`Downloaded PDF Invoice for ${order.orderNumber}`);
+                                  }}
+                                  className="inline-flex items-center justify-center p-1.5 rounded-lg border border-[#d7ded8] bg-[#f4f3ee] text-[#11241c] hover:bg-[#11241c] hover:text-white cursor-pointer transition"
+                                  title="Direct Download PDF Invoice"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setSelectedOrderModal(order)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer hover:bg-[#1c382c] transition"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -4168,6 +4299,116 @@ export default function AdminDashboardPage() {
                     );
                   })}
                 </div>
+
+                {/* Size Chart Measurements (X-axis = Available Sizes, Y-axis = Chest & Length) */}
+                <div className="pt-3 mt-2 border-t border-[#d7ded8] space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Ruler className="w-3.5 h-3.5 text-[#11241c]" />
+                      <span className="font-semibold text-xs text-[#11241c]">
+                        Size Chart Measurements (Inches)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAutoFillSizeChart}
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white border border-[#d7ded8] text-[#11241c] hover:border-[#11241c] transition cursor-pointer"
+                    >
+                      Auto-Fill Standard Chart
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#11241c]/55">
+                    Enter Chest and Length (in inches) for each available size. Shown when customers click &quot;See Size Chart&quot; in the product popup.
+                  </p>
+
+                  {selectedSizesArray.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-white/60 border border-dashed border-[#c2ccc5] text-center text-[11px] text-[#11241c]/55">
+                      Tick at least one size above (e.g. S, M, L, XL, XXL) to enter Chest and Length measurements.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-[#d7ded8] bg-white">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-[#11241c] text-white text-[10px] uppercase tracking-wider">
+                            <th className="py-2 px-3 text-left font-bold border-r border-white/15">
+                              Measurement
+                            </th>
+                            {selectedSizesArray.map((sz) => (
+                              <th
+                                key={sz}
+                                className="py-2 px-2.5 text-center font-bold border-r border-white/10 last:border-r-0"
+                              >
+                                {sz}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#ebf0ec]">
+                          <tr>
+                            <td className="py-2 px-3 font-semibold text-[#11241c] bg-[#f4f3ee]/60 border-r border-[#ebf0ec] whitespace-nowrap">
+                              Chest (in)
+                            </td>
+                            {selectedSizesArray.map((sz) => {
+                              const upper = sz.toUpperCase();
+                              const defaultPh =
+                                STANDARD_SIZE_PRESETS[upper]?.chest || '40';
+                              return (
+                                <td
+                                  key={sz}
+                                  className="p-1.5 border-r border-[#ebf0ec] last:border-r-0"
+                                >
+                                  <input
+                                    type="text"
+                                    value={prodSizeChart[sz]?.chest || ''}
+                                    onChange={(e) =>
+                                      handleSizeChartChange(
+                                        sz,
+                                        'chest',
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={`e.g. ${defaultPh}`}
+                                    className="w-full min-w-[54px] px-2 py-1.5 rounded-lg border border-[#d7ded8] text-center font-mono text-xs focus:outline-none focus:border-[#11241c]"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold text-[#11241c] bg-[#f4f3ee]/60 border-r border-[#ebf0ec] whitespace-nowrap">
+                              Length (in)
+                            </td>
+                            {selectedSizesArray.map((sz) => {
+                              const upper = sz.toUpperCase();
+                              const defaultPh =
+                                STANDARD_SIZE_PRESETS[upper]?.length || '28';
+                              return (
+                                <td
+                                  key={sz}
+                                  className="p-1.5 border-r border-[#ebf0ec] last:border-r-0"
+                                >
+                                  <input
+                                    type="text"
+                                    value={prodSizeChart[sz]?.length || ''}
+                                    onChange={(e) =>
+                                      handleSizeChartChange(
+                                        sz,
+                                        'length',
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={`e.g. ${defaultPh}`}
+                                    className="w-full min-w-[54px] px-2 py-1.5 rounded-lg border border-[#d7ded8] text-center font-mono text-xs focus:outline-none focus:border-[#11241c]"
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Available Colors: Multi-Select Checkboxes + Custom Input */}
@@ -4546,6 +4787,288 @@ export default function AdminDashboardPage() {
                 <span className="font-mono">
                   {formatBDT(selectedOrderModal.totalAmount)}
                 </span>
+              </div>
+            </div>
+
+            {/* Invoice, PDF Download & Courier Export Actions */}
+            <div className="pt-4 border-t border-[#ebf0ec] flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ord = selectedOrderModal;
+                    setSelectedOrderModal(null);
+                    setInvoiceOrderModal(ord);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold hover:bg-[#1a3529] transition cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Preview Themed Invoice</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadOrderInvoicePDF(selectedOrderModal, settings);
+                    showToast(`Downloaded PDF Invoice for ${selectedOrderModal.orderNumber}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#ebf0ec] hover:bg-[#11241c] text-[#11241c] hover:text-white border border-[#d7ded8] text-xs font-semibold transition cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportSteadfastCSV([selectedOrderModal]);
+                    showToast('Exported Steadfast Courier CSV!');
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#d7ded8] bg-white hover:bg-[#f4f3ee] text-xs font-semibold text-[#11241c] cursor-pointer"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Steadfast</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportPathaoCSV([selectedOrderModal], settings?.siteName || 'Bunon Gents');
+                    showToast('Exported Pathao Courier CSV!');
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#d7ded8] bg-white hover:bg-[#f4f3ee] text-xs font-semibold text-[#11241c] cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Pathao</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* THEMED INVOICE PREVIEW & PDF DOWNLOAD MODAL */}
+      {invoiceOrderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-[#f8f7f3] rounded-3xl max-w-3xl w-full border border-[#d7ded8] shadow-2xl overflow-hidden max-h-[94vh] flex flex-col">
+            {/* Top Action Toolbar */}
+            <div className="px-4 sm:px-6 py-3 bg-[#152d22] text-white flex flex-wrap items-center justify-between gap-2 border-b border-white/10">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <FileText className="w-4 h-4 text-[#e5c158]" />
+                <span>Official Themed Invoice · {invoiceOrderModal.orderNumber}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadOrderInvoicePDF(invoiceOrderModal, settings);
+                    showToast(`Downloaded PDF Invoice (${invoiceOrderModal.orderNumber})`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#e5c158] hover:bg-[#f0cf68] text-[#11241c] text-xs font-bold transition cursor-pointer shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => printThemedOrderInvoice(invoiceOrderModal, settings)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportSteadfastCSV([invoiceOrderModal]);
+                    showToast('Exported Steadfast Courier CSV!');
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[11px] font-medium transition cursor-pointer"
+                >
+                  <Truck className="w-3 h-3" />
+                  <span>Steadfast CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportPathaoCSV([invoiceOrderModal], settings?.siteName || 'Bunon Gents');
+                    showToast('Exported Pathao Courier CSV!');
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[11px] font-medium transition cursor-pointer"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Pathao CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInvoiceOrderModal(null)}
+                  className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+                  aria-label="Close invoice preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Themed Invoice Sheet */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Luxury Forest Green Header Banner */}
+              <div className="bg-[#0e2018] text-[#f4f3ee] px-5 sm:px-8 py-6 border-b-4 border-[#e5c158] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <BrandLogo size="md" showTagline />
+                  <p className="text-[11px] text-white/65 mt-2">
+                    {settings?.contactPhone || '+880 1700-000000'} ·{' '}
+                    {settings?.contactEmail || 'support@bunongents.com'}
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#e5c158]/20 border border-[#e5c158]/40 text-[#e5c158] text-[10px] font-bold uppercase tracking-widest">
+                    Official Invoice & Packing Slip
+                  </span>
+                  <p className="font-mono text-lg sm:text-xl font-bold text-white mt-1.5">
+                    {invoiceOrderModal.orderNumber}
+                  </p>
+                  <p className="text-[11px] text-white/65">
+                    Date:{' '}
+                    {new Date(invoiceOrderModal.createdAt).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}{' '}
+                    · Status: <strong className="text-[#e5c158]">{invoiceOrderModal.orderStatus}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Invoice Body */}
+              <div className="p-5 sm:p-8 space-y-6 text-xs text-[#11241c]">
+                {/* Recipient & Payment Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-[#d7ded8] space-y-1">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-[#11241c]/50">
+                      Deliver To (Recipient)
+                    </p>
+                    <p className="font-bold text-sm text-[#11241c]">
+                      {invoiceOrderModal.customerName}
+                    </p>
+                    <p className="font-mono font-semibold text-[#11241c]/80">
+                      {invoiceOrderModal.customerPhone}
+                    </p>
+                    <p className="text-[#11241c]/70 leading-relaxed pt-1">
+                      {invoiceOrderModal.shippingAddress.address},{' '}
+                      <strong>{invoiceOrderModal.shippingAddress.city}</strong> (
+                      {invoiceOrderModal.shippingAddress.deliveryZone})
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-[#d7ded8] flex flex-col justify-between space-y-2">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-[#11241c]/50">
+                        Payment & Courier Collectible
+                      </p>
+                      <p className="font-bold text-sm mt-1">
+                        Method: {invoiceOrderModal.paymentMethod} ({invoiceOrderModal.paymentStatus})
+                      </p>
+                      {invoiceOrderModal.paymentDetails?.transactionId ? (
+                        <p className="font-mono text-[11px] text-pink-700 mt-0.5">
+                          TrxID: <strong>{invoiceOrderModal.paymentDetails.transactionId}</strong> (
+                          {invoiceOrderModal.paymentDetails.senderNumber})
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-[#11241c]/60 mt-0.5">
+                          Cash on Delivery
+                        </p>
+                      )}
+                    </div>
+                    <div className="px-3.5 py-2 rounded-xl bg-[#11241c] text-[#e5c158] font-mono font-bold flex items-center justify-between">
+                      <span>Collectable COD:</span>
+                      <span className="text-sm">
+                        {formatBDT(
+                          invoiceOrderModal.paymentStatus === 'Verified'
+                            ? 0
+                            : invoiceOrderModal.totalAmount
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ordered Items Table */}
+                <div className="bg-white rounded-2xl border border-[#d7ded8] overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#11241c] text-[#f4f3ee] text-[10px] uppercase tracking-wider">
+                          <th className="py-3 px-4">#</th>
+                          <th className="py-3 px-4">Piece Description</th>
+                          <th className="py-3 px-4">Size / Color</th>
+                          <th className="py-3 px-4 text-center">Qty</th>
+                          <th className="py-3 px-4 text-right">Unit Price</th>
+                          <th className="py-3 px-4 text-right text-[#e5c158]">Line Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#ebf0ec]">
+                        {invoiceOrderModal.items.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-[#f4f3ee]/40">
+                            <td className="py-3 px-4 font-mono">{idx + 1}</td>
+                            <td className="py-3 px-4 font-bold">{item.title}</td>
+                            <td className="py-3 px-4 text-[#11241c]/75">
+                              {item.size} · {item.color}
+                            </td>
+                            <td className="py-3 px-4 text-center font-bold">{item.quantity}</td>
+                            <td className="py-3 px-4 text-right font-mono">
+                              {formatBDT(item.price)}
+                            </td>
+                            <td className="py-3 px-4 text-right font-mono font-bold">
+                              {formatBDT(item.price * item.quantity)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals & Courier Parcel Slip */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                  <div className="p-4 rounded-2xl border border-dashed border-[#11241c]/40 bg-[#ebf0ec]/70 space-y-1">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-[#11241c]">
+                      Steadfast / Pathao Parcel Label
+                    </p>
+                    <p className="font-mono font-bold">
+                      Invoice: {invoiceOrderModal.orderNumber}
+                    </p>
+                    <p>
+                      {invoiceOrderModal.customerName} · {invoiceOrderModal.customerPhone}
+                    </p>
+                    <p className="text-[11px] text-[#11241c]/70">
+                      {invoiceOrderModal.shippingAddress.address},{' '}
+                      {invoiceOrderModal.shippingAddress.city}
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#d7ded8] overflow-hidden">
+                    <div className="flex justify-between px-4 py-2.5 border-b border-[#ebf0ec]">
+                      <span className="text-[#11241c]/70">Subtotal</span>
+                      <span className="font-mono font-semibold">
+                        {formatBDT(invoiceOrderModal.subtotal)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between px-4 py-2.5 border-b border-[#ebf0ec]">
+                      <span className="text-[#11241c]/70">
+                        Shipping ({invoiceOrderModal.shippingAddress.deliveryZone})
+                      </span>
+                      <span className="font-mono font-semibold">
+                        {formatBDT(invoiceOrderModal.shippingCost)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between px-4 py-3 bg-[#11241c] text-[#e5c158] font-bold text-sm">
+                      <span>Grand Total</span>
+                      <span className="font-mono">
+                        {formatBDT(invoiceOrderModal.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

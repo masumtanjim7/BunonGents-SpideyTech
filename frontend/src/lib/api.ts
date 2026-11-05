@@ -13,6 +13,7 @@ export interface Product {
   image: string;
   gallery: string[];
   sizes: string[];
+  sizeChart?: Record<string, { chest?: string; length?: string }>;
   colors: string[];
   stock: number;
   featured: boolean;
