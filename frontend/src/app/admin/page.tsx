@@ -32,6 +32,8 @@ import {
   MessageCircle,
   Truck,
   Save,
+  Menu,
+  ChevronRight,
 } from 'lucide-react';
 import {
   API_URL,
@@ -120,8 +122,9 @@ export default function AdminDashboardPage() {
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
-  // Active Tab
+  // Active Tab & Mobile Menu Drawer
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [mobileAdminMenuOpen, setMobileAdminMenuOpen] = useState(false);
 
   // Data States
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -225,6 +228,17 @@ export default function AdminDashboardPage() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (mobileAdminMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileAdminMenuOpen]);
 
   const fetchAllAdminData = async (authToken: string) => {
     try {
@@ -1163,34 +1177,41 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Left Sidebar (Desktop) & Top Nav (Mobile/Tablet) */}
-      <aside className="w-full lg:w-68 bg-[#0e2018] text-white flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 lg:sticky lg:top-0 lg:h-screen">
+      {/* Left Sidebar (Desktop) & Sticky Top Bar (Mobile/Tablet) */}
+      <aside className="w-full lg:w-68 bg-[#0e2018] text-white flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 sticky top-0 z-30 lg:h-screen">
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Sidebar Brand Header */}
-          <div className="p-4 sm:p-5 lg:p-6 border-b border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+          <div className="px-4 py-3.5 sm:p-5 lg:p-6 border-b border-white/10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
               <BrandLogo size="sm" />
-              <span className="px-2 py-0.5 rounded-md bg-[#e5c158]/15 border border-[#e5c158]/30 text-[9px] font-bold uppercase tracking-widest text-[#e5c158]">
+              <span className="px-2 py-0.5 rounded-md bg-[#e5c158]/15 border border-[#e5c158]/30 text-[9px] font-bold uppercase tracking-widest text-[#e5c158] shrink-0">
                 Admin
               </span>
             </div>
 
-            {/* Mobile Quick Actions */}
-            <div className="flex items-center gap-2 lg:hidden">
-              <Link
-                href="/"
-                target="_blank"
-                className="px-2.5 py-1.5 rounded-lg bg-white/10 text-[11px] font-medium text-white/90 hover:bg-white/20 flex items-center gap-1"
-              >
-                <span>Store</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
+            {/* Mobile Active Section Pill + Hamburger Menu Toggle */}
+            <div className="flex items-center gap-2 lg:hidden shrink-0">
               <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 transition cursor-pointer"
-                title="Sign Out"
+                type="button"
+                onClick={() => setMobileAdminMenuOpen(true)}
+                className="hidden xs:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/10 text-[11px] font-medium text-white/85"
               >
-                <LogOut className="w-4 h-4" />
+                <span className="truncate max-w-[110px]">
+                  {TAB_HEADERS[activeTab].title}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileAdminMenuOpen(true)}
+                aria-label="Open Admin Menu"
+                className="relative inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f4f3ee] text-[#11241c] text-xs font-bold shadow-xs active:scale-95 transition cursor-pointer"
+              >
+                <Menu className="w-4 h-4" />
+                <span>Menu</span>
+                {pendingOrdersCount > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                )}
               </button>
             </div>
           </div>
@@ -1241,8 +1262,8 @@ export default function AdminDashboardPage() {
             ))}
           </nav>
 
-          {/* Mobile & Tablet Horizontal Scroll Navigation */}
-          <nav className="flex lg:hidden items-center gap-1.5 px-3 py-2.5 overflow-x-auto scrollbar-none">
+          {/* Mobile & Tablet Quick Tab Strip */}
+          <nav className="flex lg:hidden items-center gap-1.5 px-3 py-2 overflow-x-auto scrollbar-none bg-black/15">
             {navGroups.flatMap((g) => g.items).map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
@@ -1250,7 +1271,7 @@ export default function AdminDashboardPage() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
                     active
                       ? 'bg-[#f4f3ee] text-[#11241c] font-semibold shadow-xs'
                       : 'text-white/75 bg-white/5 hover:bg-white/10 hover:text-white'
@@ -1309,6 +1330,134 @@ export default function AdminDashboardPage() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile Admin Navigation Slide-Over Drawer */}
+      {mobileAdminMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileAdminMenuOpen(false)}
+          />
+
+          {/* Slide-Over Panel */}
+          <div className="relative z-10 w-[85%] max-w-xs bg-[#0e2018] text-white h-full flex flex-col justify-between shadow-2xl border-r border-white/10 overflow-hidden">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/20">
+              <div className="flex items-center gap-2">
+                <BrandLogo size="sm" />
+                <span className="px-2 py-0.5 rounded-md bg-[#e5c158]/15 border border-[#e5c158]/30 text-[9px] font-bold uppercase tracking-widest text-[#e5c158]">
+                  Admin
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileAdminMenuOpen(false)}
+                aria-label="Close Menu"
+                className="p-2 rounded-xl bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Grouped Navigation Items */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              {navGroups.map((group) => (
+                <div key={group.groupLabel}>
+                  <p className="px-3 mb-1.5 text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">
+                    {group.groupLabel}
+                  </p>
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setMobileAdminMenuOpen(false);
+                          }}
+                          className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-medium transition cursor-pointer w-full text-left ${
+                            active
+                              ? 'bg-[#f4f3ee] text-[#11241c] font-semibold shadow-sm'
+                              : 'text-white/80 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Icon className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{item.label}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {item.badge && (
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  active
+                                    ? 'bg-[#11241c] text-white'
+                                    : item.highlightBadge
+                                    ? 'bg-[#e5c158] text-[#11241c]'
+                                    : 'bg-white/15 text-white/85'
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                            <ChevronRight
+                              className={`w-3.5 h-3.5 ${
+                                active ? 'text-[#11241c]' : 'text-white/30'
+                              }`}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Drawer Footer: Admin Profile + Storefront + Logout */}
+            <div className="p-4 border-t border-white/10 space-y-2.5 bg-black/25">
+              {adminUser && (
+                <div className="px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-[9px] uppercase tracking-wider text-white/45 font-semibold">
+                    Signed In Administrator
+                  </p>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    {adminUser.name}
+                  </p>
+                  <p className="text-[11px] text-white/60 truncate">
+                    {adminUser.email}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/"
+                  target="_blank"
+                  onClick={() => setMobileAdminMenuOpen(false)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-medium text-white transition"
+                >
+                  <span>Live Store</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileAdminMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-xs font-semibold text-red-200 transition cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 sm:p-7 lg:p-10 overflow-y-auto">
@@ -1532,63 +1681,116 @@ export default function AdminDashboardPage() {
                   No customer orders placed yet.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
-                        <th className="py-3.5 px-5">Order ID</th>
-                        <th className="py-3.5 px-5">Customer</th>
-                        <th className="py-3.5 px-5">Payment</th>
-                        <th className="py-3.5 px-5">Total</th>
-                        <th className="py-3.5 px-5">Status</th>
-                        <th className="py-3.5 px-5 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#ebf0ec]">
-                      {orders.slice(0, 6).map((o) => (
-                        <tr key={o._id} className="hover:bg-[#f4f3ee]/40">
-                          <td className="py-3.5 px-5 font-mono font-bold">
+                <>
+                  {/* Mobile Stacked Order Cards */}
+                  <div className="md:hidden divide-y divide-[#ebf0ec]">
+                    {orders.slice(0, 6).map((o) => (
+                      <div key={o._id} className="p-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-bold text-xs break-all">
                             {o.orderNumber}
-                          </td>
-                          <td className="py-3.5 px-5">
-                            <p className="font-semibold">{o.customerName}</p>
-                            <p className="text-[#11241c]/60">{o.customerPhone}</p>
-                          </td>
-                          <td className="py-3.5 px-5">
-                            <span className="font-semibold">
-                              {o.paymentMethod}
-                            </span>
-                            {o.paymentDetails?.transactionId && (
-                              <span className="block text-[10px] font-mono text-pink-700">
-                                TrxID: {o.paymentDetails.transactionId}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-5 font-bold font-mono">
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${getOrderStatusBadgeClass(
+                              o.orderStatus
+                            )}`}
+                          >
+                            {o.orderStatus}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-semibold text-[#11241c]">
+                              {o.customerName}
+                            </p>
+                            <p className="text-[11px] text-[#11241c]/60">
+                              {o.customerPhone} · {o.paymentMethod}
+                            </p>
+                          </div>
+                          <p className="font-bold font-mono text-sm">
                             {formatBDT(o.totalAmount)}
-                          </td>
-                          <td className="py-3.5 px-5">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${getOrderStatusBadgeClass(
-                                o.orderStatus
-                              )}`}
-                            >
-                              {o.orderStatus}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          {o.paymentDetails?.transactionId ? (
+                            <span className="text-[10px] font-mono text-pink-700">
+                              TrxID: {o.paymentDetails.transactionId}
                             </span>
-                          </td>
-                          <td className="py-3.5 px-5 text-right">
-                            <button
-                              onClick={() => setSelectedOrderModal(o)}
-                              className="px-3 py-1.5 rounded-lg border border-[#d7ded8] hover:bg-[#11241c] hover:text-white transition cursor-pointer font-medium"
-                            >
-                              Manage
-                            </button>
-                          </td>
+                          ) : (
+                            <span className="text-[10px] text-[#11241c]/45">
+                              {new Date(o.createdAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setSelectedOrderModal(o)}
+                            className="px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer"
+                          >
+                            Manage Order
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
+                          <th className="py-3.5 px-5">Order ID</th>
+                          <th className="py-3.5 px-5">Customer</th>
+                          <th className="py-3.5 px-5">Payment</th>
+                          <th className="py-3.5 px-5">Total</th>
+                          <th className="py-3.5 px-5">Status</th>
+                          <th className="py-3.5 px-5 text-right">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#ebf0ec]">
+                        {orders.slice(0, 6).map((o) => (
+                          <tr key={o._id} className="hover:bg-[#f4f3ee]/40">
+                            <td className="py-3.5 px-5 font-mono font-bold">
+                              {o.orderNumber}
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <p className="font-semibold">{o.customerName}</p>
+                              <p className="text-[#11241c]/60">{o.customerPhone}</p>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span className="font-semibold">
+                                {o.paymentMethod}
+                              </span>
+                              {o.paymentDetails?.transactionId && (
+                                <span className="block text-[10px] font-mono text-pink-700">
+                                  TrxID: {o.paymentDetails.transactionId}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-5 font-bold font-mono">
+                              {formatBDT(o.totalAmount)}
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${getOrderStatusBadgeClass(
+                                  o.orderStatus
+                                )}`}
+                              >
+                                {o.orderStatus}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-right">
+                              <button
+                                onClick={() => setSelectedOrderModal(o)}
+                                className="px-3 py-1.5 rounded-lg border border-[#d7ded8] hover:bg-[#11241c] hover:text-white transition cursor-pointer font-medium"
+                              >
+                                Manage
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1657,106 +1859,193 @@ export default function AdminDashboardPage() {
                   No matching orders found.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
-                        <th className="py-3.5 px-5">Order</th>
-                        <th className="py-3.5 px-5">Customer & Address</th>
-                        <th className="py-3.5 px-5">Payment & TrxID</th>
-                        <th className="py-3.5 px-5">Amount</th>
-                        <th className="py-3.5 px-5">Order Status</th>
-                        <th className="py-3.5 px-5 text-right">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#ebf0ec]">
-                      {filteredOrders.map((order) => (
-                        <tr key={order._id} className="hover:bg-[#f4f3ee]/40">
-                          <td className="py-4 px-5">
-                            <span className="font-mono font-bold block">
+                <>
+                  {/* Mobile Orders Card List */}
+                  <div className="md:hidden divide-y divide-[#ebf0ec]">
+                    {filteredOrders.map((order) => (
+                      <div key={order._id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-mono font-bold text-xs break-all block">
                               {order.orderNumber}
                             </span>
                             <span className="text-[10px] text-[#11241c]/50">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </span>
-                          </td>
-                          <td className="py-4 px-5">
-                            <p className="font-semibold">{order.customerName}</p>
-                            <p className="text-[#11241c]/70">
-                              {order.customerPhone}
-                            </p>
-                            <p className="text-[11px] text-[#11241c]/55 truncate max-w-xs">
-                              {order.shippingAddress.address},{' '}
-                              {order.shippingAddress.city}
-                            </p>
-                          </td>
-                          <td className="py-4 px-5">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                order.paymentMethod === 'bKash'
-                                  ? 'bg-pink-100 text-pink-800'
-                                  : order.paymentMethod === 'Nagad'
-                                  ? 'bg-orange-100 text-orange-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
-                            >
-                              {order.paymentMethod} ({order.paymentStatus})
-                            </span>
-                            {order.paymentDetails?.transactionId && (
-                              <div className="mt-1 text-[11px] font-mono">
-                                <span className="text-[#11241c]/60">From:</span>{' '}
-                                {order.paymentDetails.senderNumber}
-                                <br />
-                                <span className="text-[#11241c]/60">
-                                  TrxID:
-                                </span>{' '}
-                                <strong>
-                                  {order.paymentDetails.transactionId}
-                                </strong>
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-4 px-5 font-bold font-mono text-sm">
+                          </div>
+                          <span className="font-bold font-mono text-sm text-[#11241c]">
                             {formatBDT(order.totalAmount)}
-                          </td>
-                          <td className="py-4 px-5">
-                            <select
-                              value={order.orderStatus}
-                              onChange={(e) =>
-                                handleUpdateOrder(order._id, {
-                                  orderStatus: e.target.value,
-                                })
-                              }
-                              className="px-3 py-1.5 rounded-lg border border-[#d7ded8] bg-[#f4f3ee] text-xs font-semibold cursor-pointer"
-                            >
-                              {[
-                                'Pending',
-                                'Confirmed',
-                                'Processing',
-                                'Shipped',
-                                'Delivered',
-                                'Cancelled',
-                              ].map((st) => (
-                                <option key={st} value={st}>
-                                  {st}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-4 px-5 text-right">
-                            <button
-                              onClick={() => setSelectedOrderModal(order)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer hover:bg-[#1c382c] transition"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>View</span>
-                            </button>
-                          </td>
+                          </span>
+                        </div>
+
+                        <div className="bg-[#f4f3ee]/70 p-3 rounded-xl text-xs space-y-1">
+                          <p className="font-semibold">{order.customerName}</p>
+                          <p className="text-[#11241c]/70">
+                            {order.customerPhone}
+                          </p>
+                          <p className="text-[11px] text-[#11241c]/55">
+                            {order.shippingAddress.address},{' '}
+                            {order.shippingAddress.city}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                              order.paymentMethod === 'bKash'
+                                ? 'bg-pink-100 text-pink-800'
+                                : order.paymentMethod === 'Nagad'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {order.paymentMethod} ({order.paymentStatus})
+                          </span>
+                          {order.paymentDetails?.transactionId && (
+                            <span className="text-[11px] font-mono text-pink-700">
+                              TrxID: <strong>{order.paymentDetails.transactionId}</strong>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <select
+                            value={order.orderStatus}
+                            onChange={(e) =>
+                              handleUpdateOrder(order._id, {
+                                orderStatus: e.target.value,
+                              })
+                            }
+                            className="flex-1 px-3 py-2 rounded-xl border border-[#d7ded8] bg-[#f4f3ee] text-xs font-semibold cursor-pointer"
+                          >
+                            {[
+                              'Pending',
+                              'Confirmed',
+                              'Processing',
+                              'Shipped',
+                              'Delivered',
+                              'Cancelled',
+                            ].map((st) => (
+                              <option key={st} value={st}>
+                                {st}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            onClick={() => setSelectedOrderModal(order)}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#11241c] text-white text-xs font-medium cursor-pointer shrink-0"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Orders Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
+                          <th className="py-3.5 px-5">Order</th>
+                          <th className="py-3.5 px-5">Customer & Address</th>
+                          <th className="py-3.5 px-5">Payment & TrxID</th>
+                          <th className="py-3.5 px-5">Amount</th>
+                          <th className="py-3.5 px-5">Order Status</th>
+                          <th className="py-3.5 px-5 text-right">Details</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#ebf0ec]">
+                        {filteredOrders.map((order) => (
+                          <tr key={order._id} className="hover:bg-[#f4f3ee]/40">
+                            <td className="py-4 px-5">
+                              <span className="font-mono font-bold block">
+                                {order.orderNumber}
+                              </span>
+                              <span className="text-[10px] text-[#11241c]/50">
+                                {new Date(order.createdAt).toLocaleDateString()}
+                              </span>
+                            </td>
+                            <td className="py-4 px-5">
+                              <p className="font-semibold">{order.customerName}</p>
+                              <p className="text-[#11241c]/70">
+                                {order.customerPhone}
+                              </p>
+                              <p className="text-[11px] text-[#11241c]/55 truncate max-w-xs">
+                                {order.shippingAddress.address},{' '}
+                                {order.shippingAddress.city}
+                              </p>
+                            </td>
+                            <td className="py-4 px-5">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                  order.paymentMethod === 'bKash'
+                                    ? 'bg-pink-100 text-pink-800'
+                                    : order.paymentMethod === 'Nagad'
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {order.paymentMethod} ({order.paymentStatus})
+                              </span>
+                              {order.paymentDetails?.transactionId && (
+                                <div className="mt-1 text-[11px] font-mono">
+                                  <span className="text-[#11241c]/60">From:</span>{' '}
+                                  {order.paymentDetails.senderNumber}
+                                  <br />
+                                  <span className="text-[#11241c]/60">
+                                    TrxID:
+                                  </span>{' '}
+                                  <strong>
+                                    {order.paymentDetails.transactionId}
+                                  </strong>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-4 px-5 font-bold font-mono text-sm">
+                              {formatBDT(order.totalAmount)}
+                            </td>
+                            <td className="py-4 px-5">
+                              <select
+                                value={order.orderStatus}
+                                onChange={(e) =>
+                                  handleUpdateOrder(order._id, {
+                                    orderStatus: e.target.value,
+                                  })
+                                }
+                                className="px-3 py-1.5 rounded-lg border border-[#d7ded8] bg-[#f4f3ee] text-xs font-semibold cursor-pointer"
+                              >
+                                {[
+                                  'Pending',
+                                  'Confirmed',
+                                  'Processing',
+                                  'Shipped',
+                                  'Delivered',
+                                  'Cancelled',
+                                ].map((st) => (
+                                  <option key={st} value={st}>
+                                    {st}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-4 px-5 text-right">
+                              <button
+                                onClick={() => setSelectedOrderModal(order)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer hover:bg-[#1c382c] transition"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>View</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1837,108 +2126,186 @@ export default function AdminDashboardPage() {
                   No customer accounts created yet.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
-                        <th className="py-3.5 px-5">Customer</th>
-                        <th className="py-3.5 px-5">Phone & Location</th>
-                        <th className="py-3.5 px-5">Orders & Spent</th>
-                        <th className="py-3.5 px-5">Joined / Last Login</th>
-                        <th className="py-3.5 px-5">Status</th>
-                        <th className="py-3.5 px-5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#ebf0ec]">
-                      {customersOnly
-                        .filter((u) => {
-                          if (userStatusFilter === 'Active')
-                            return u.isActive !== false;
-                          if (userStatusFilter === 'Suspended')
-                            return u.isActive === false;
-                          return true;
-                        })
-                        .filter((u) => {
-                          if (!userSearch.trim()) return true;
-                          const q = userSearch.toLowerCase();
-                          return (
-                            u.name.toLowerCase().includes(q) ||
-                            u.email.toLowerCase().includes(q) ||
-                            (u.phone || '').includes(q)
-                          );
-                        })
-                        .map((u) => (
-                          <tr key={u._id} className="hover:bg-[#f4f3ee]/40">
-                            <td className="py-4 px-5">
-                              <p className="font-bold text-sm">{u.name}</p>
-                              <p className="text-[#11241c]/65">{u.email}</p>
-                            </td>
-                            <td className="py-4 px-5">
-                              <p className="font-medium">
+                <>
+                  {/* Mobile Customer Cards */}
+                  <div className="md:hidden divide-y divide-[#ebf0ec]">
+                    {customersOnly
+                      .filter((u) => {
+                        if (userStatusFilter === 'Active')
+                          return u.isActive !== false;
+                        if (userStatusFilter === 'Suspended')
+                          return u.isActive === false;
+                        return true;
+                      })
+                      .filter((u) => {
+                        if (!userSearch.trim()) return true;
+                        const q = userSearch.toLowerCase();
+                        return (
+                          u.name.toLowerCase().includes(q) ||
+                          u.email.toLowerCase().includes(q) ||
+                          (u.phone || '').includes(q)
+                        );
+                      })
+                      .map((u) => (
+                        <div key={u._id} className="p-4 space-y-3 text-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm truncate">
+                                {u.name}
+                              </p>
+                              <p className="text-[#11241c]/65 truncate">
+                                {u.email}
+                              </p>
+                              <p className="text-[#11241c]/60 mt-0.5">
                                 {u.phone || 'No phone'}
                               </p>
-                              <p className="text-[11px] text-[#11241c]/55 truncate max-w-xs">
-                                {u.address
-                                  ? `${u.address}, ${u.city || ''}`
-                                  : 'No saved address'}
-                              </p>
-                            </td>
-                            <td className="py-4 px-5">
-                              <p className="font-bold">
-                                {u.ordersCount || 0} orders
-                              </p>
-                              <p className="text-emerald-800 font-semibold font-mono">
-                                {formatBDT(u.totalSpent || 0)} spent
-                              </p>
-                            </td>
-                            <td className="py-4 px-5 text-[11px] text-[#11241c]/65">
-                              <p>
-                                Joined:{' '}
-                                {u.createdAt
-                                  ? new Date(u.createdAt).toLocaleDateString()
-                                  : '-'}
-                              </p>
-                              <p>
-                                Active:{' '}
-                                {u.lastLogin
-                                  ? new Date(u.lastLogin).toLocaleDateString()
-                                  : '-'}
-                              </p>
-                            </td>
-                            <td className="py-4 px-5">
-                              <span
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                                  u.isActive !== false
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-red-100 text-red-700'
-                                }`}
-                              >
-                                {u.isActive !== false ? 'Active' : 'Suspended'}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5 text-right space-x-2">
-                              <button
-                                onClick={() => setSelectedUserModal(u)}
-                                className="px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer"
-                              >
-                                Details
-                              </button>
-                              <button
-                                onClick={() => handleToggleUserStatus(u)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer ${
-                                  u.isActive !== false
-                                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                                    : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                                }`}
-                              >
-                                {u.isActive !== false ? 'Suspend' : 'Activate'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                                u.isActive !== false
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {u.isActive !== false ? 'Active' : 'Suspended'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between bg-[#f4f3ee]/70 px-3 py-2 rounded-xl">
+                            <span>
+                              <strong>{u.ordersCount || 0}</strong> orders
+                            </span>
+                            <span className="text-emerald-800 font-semibold font-mono">
+                              {formatBDT(u.totalSpent || 0)} spent
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedUserModal(u)}
+                              className="flex-1 py-2 rounded-xl bg-[#11241c] text-white text-xs font-medium cursor-pointer"
+                            >
+                              Details
+                            </button>
+                            <button
+                              onClick={() => handleToggleUserStatus(u)}
+                              className={`flex-1 py-2 rounded-xl text-xs font-medium border cursor-pointer ${
+                                u.isActive !== false
+                                  ? 'border-amber-300 bg-amber-50 text-amber-800'
+                                  : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                              }`}
+                            >
+                              {u.isActive !== false ? 'Suspend' : 'Activate'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Desktop Customers Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#f4f3ee] text-[#11241c]/60 uppercase tracking-wider text-[10px]">
+                          <th className="py-3.5 px-5">Customer</th>
+                          <th className="py-3.5 px-5">Phone & Location</th>
+                          <th className="py-3.5 px-5">Orders & Spent</th>
+                          <th className="py-3.5 px-5">Joined / Last Login</th>
+                          <th className="py-3.5 px-5">Status</th>
+                          <th className="py-3.5 px-5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#ebf0ec]">
+                        {customersOnly
+                          .filter((u) => {
+                            if (userStatusFilter === 'Active')
+                              return u.isActive !== false;
+                            if (userStatusFilter === 'Suspended')
+                              return u.isActive === false;
+                            return true;
+                          })
+                          .filter((u) => {
+                            if (!userSearch.trim()) return true;
+                            const q = userSearch.toLowerCase();
+                            return (
+                              u.name.toLowerCase().includes(q) ||
+                              u.email.toLowerCase().includes(q) ||
+                              (u.phone || '').includes(q)
+                            );
+                          })
+                          .map((u) => (
+                            <tr key={u._id} className="hover:bg-[#f4f3ee]/40">
+                              <td className="py-4 px-5">
+                                <p className="font-bold text-sm">{u.name}</p>
+                                <p className="text-[#11241c]/65">{u.email}</p>
+                              </td>
+                              <td className="py-4 px-5">
+                                <p className="font-medium">
+                                  {u.phone || 'No phone'}
+                                </p>
+                                <p className="text-[11px] text-[#11241c]/55 truncate max-w-xs">
+                                  {u.address
+                                    ? `${u.address}, ${u.city || ''}`
+                                    : 'No saved address'}
+                                </p>
+                              </td>
+                              <td className="py-4 px-5">
+                                <p className="font-bold">
+                                  {u.ordersCount || 0} orders
+                                </p>
+                                <p className="text-emerald-800 font-semibold font-mono">
+                                  {formatBDT(u.totalSpent || 0)} spent
+                                </p>
+                              </td>
+                              <td className="py-4 px-5 text-[11px] text-[#11241c]/65">
+                                <p>
+                                  Joined:{' '}
+                                  {u.createdAt
+                                    ? new Date(u.createdAt).toLocaleDateString()
+                                    : '-'}
+                                </p>
+                                <p>
+                                  Active:{' '}
+                                  {u.lastLogin
+                                    ? new Date(u.lastLogin).toLocaleDateString()
+                                    : '-'}
+                                </p>
+                              </td>
+                              <td className="py-4 px-5">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                    u.isActive !== false
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {u.isActive !== false ? 'Active' : 'Suspended'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-right space-x-2">
+                                <button
+                                  onClick={() => setSelectedUserModal(u)}
+                                  className="px-3 py-1.5 rounded-lg bg-[#11241c] text-white text-xs font-medium cursor-pointer"
+                                >
+                                  Details
+                                </button>
+                                <button
+                                  onClick={() => handleToggleUserStatus(u)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer ${
+                                    u.isActive !== false
+                                      ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                      : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                  }`}
+                                >
+                                  {u.isActive !== false ? 'Suspend' : 'Activate'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -2265,7 +2632,7 @@ export default function AdminDashboardPage() {
                   <label className="block text-xs font-semibold mb-1.5">
                     Hero Background Image (Upload via ImgBB or paste URL)
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       value={settings.heroImage || ''}
@@ -2274,7 +2641,7 @@ export default function AdminDashboardPage() {
                       }
                       className="flex-1 px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm"
                     />
-                    <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0">
+                    <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0">
                       <Upload className="w-3.5 h-3.5" />
                       <span>{uploadingImg ? '...' : 'Upload'}</span>
                       <input
@@ -3011,7 +3378,7 @@ export default function AdminDashboardPage() {
                     <span>Primary Cover Photo *</span>
                     <span className="text-[10px] text-emerald-800 font-medium">Main catalog thumbnail</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       required={prodGallery.length === 0}
@@ -3020,7 +3387,7 @@ export default function AdminDashboardPage() {
                       placeholder="Paste primary image URL (https://...)"
                       className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-xs"
                     />
-                    <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white font-semibold flex items-center gap-2 cursor-pointer shrink-0">
+                    <label className="px-4 py-2.5 rounded-xl bg-[#11241c] text-white font-semibold flex items-center justify-center gap-2 cursor-pointer shrink-0">
                       <Upload className="w-3.5 h-3.5" />
                       <span>{uploadingImg ? 'Uploading...' : 'Upload Cover'}</span>
                       <input
@@ -3041,29 +3408,31 @@ export default function AdminDashboardPage() {
                     <span>Additional Gallery Photos (Multiple angles / details)</span>
                     <span className="text-[10px] text-[#11241c]/60">{prodGallery.length} additional added</span>
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={customGalleryUrl}
-                      onChange={(e) => setCustomGalleryUrl(e.target.value)}
-                      placeholder="Paste additional image URL"
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddGalleryUrl();
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddGalleryUrl}
-                      disabled={!customGalleryUrl.trim()}
-                      className="px-3.5 py-2.5 rounded-xl bg-[#2a3f36] text-white font-semibold hover:bg-[#1a2923] transition disabled:opacity-50 cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                    <label className="px-4 py-2.5 rounded-xl border border-[#11241c] bg-white text-[#11241c] font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 hover:bg-[#ebf0ec] transition">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={customGalleryUrl}
+                        onChange={(e) => setCustomGalleryUrl(e.target.value)}
+                        placeholder="Paste additional image URL"
+                        className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#d7ded8] bg-white text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddGalleryUrl();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddGalleryUrl}
+                        disabled={!customGalleryUrl.trim()}
+                        className="px-3.5 py-2.5 rounded-xl bg-[#2a3f36] text-white font-semibold hover:bg-[#1a2923] transition disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <label className="px-4 py-2.5 rounded-xl border border-[#11241c] bg-white text-[#11241c] font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 hover:bg-[#ebf0ec] transition">
                       <Upload className="w-3.5 h-3.5" />
                       <span>{uploadingGalleryImg ? 'Uploading...' : 'Upload More'}</span>
                       <input
@@ -3106,7 +3475,7 @@ export default function AdminDashboardPage() {
                           alt={`Gallery ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1.5 p-1 text-white">
+                        <div className="absolute inset-0 bg-black/55 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1.5 p-1 text-white">
                           <button
                             type="button"
                             onClick={() => handleSetGalleryAsPrimary(idx)}
@@ -3284,14 +3653,14 @@ export default function AdminDashboardPage() {
                 <label className="block font-semibold mb-1">
                   Background Image (ImgBB Upload or URL)
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={colImage}
                     onChange={(e) => setColImage(e.target.value)}
                     className="flex-1 px-3.5 py-2 rounded-xl border border-[#d7ded8] text-sm"
                   />
-                  <label className="px-4 py-2 rounded-xl bg-[#11241c] text-white font-semibold flex items-center gap-1.5 cursor-pointer">
+                  <label className="px-4 py-2 rounded-xl bg-[#11241c] text-white font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0">
                     <Upload className="w-3.5 h-3.5" />
                     <span>ImgBB</span>
                     <input
