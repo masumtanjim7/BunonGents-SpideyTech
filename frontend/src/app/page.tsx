@@ -57,6 +57,9 @@ const FALLBACK_SETTINGS: SiteSettings = {
   contactEmail: 'support@example.com',
   contactPhone: '+880 1700-000000',
   categories: ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'],
+  whatsappNumber: '+880 1700-000000',
+  whatsappActive: true,
+  whatsappMessage: 'Hello Bunon Gents! I would like to inquire about your collection.',
 };
 
 const FALLBACK_COLLECTIONS: CollectionItem[] = [

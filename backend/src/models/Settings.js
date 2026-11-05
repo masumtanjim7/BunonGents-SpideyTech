@@ -98,6 +98,18 @@ const settingsSchema = new mongoose.Schema(
       type: [String],
       default: ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'],
     },
+    whatsappNumber: {
+      type: String,
+      default: '+880 1700-000000',
+    },
+    whatsappActive: {
+      type: Boolean,
+      default: true,
+    },
+    whatsappMessage: {
+      type: String,
+      default: 'Hello Bunon Gents! I would like to inquire about your collection.',
+    },
   },
   { timestamps: true }
 );

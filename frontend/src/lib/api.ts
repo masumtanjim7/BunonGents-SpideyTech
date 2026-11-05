@@ -56,6 +56,9 @@ export interface SiteSettings {
   contactEmail: string;
   contactPhone: string;
   categories: string[];
+  whatsappNumber?: string;
+  whatsappActive?: boolean;
+  whatsappMessage?: string;
 }
 
 export interface OrderItem {

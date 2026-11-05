@@ -31,6 +31,7 @@ import {
   Mail,
   ArrowLeft,
   Image as ImageIcon,
+  MessageCircle,
 } from 'lucide-react';
 import {
   API_URL,
@@ -1912,6 +1913,98 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* WhatsApp Live Support Configuration */}
+              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#d7ded8] shadow-xs space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#ebf0ec] pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                      <MessageCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-editorial text-2xl font-semibold">
+                        WhatsApp Live Support
+                      </h2>
+                      <p className="text-xs text-[#11241c]/60">
+                        Floating WhatsApp button displayed at the bottom-right of the storefront
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 text-xs font-semibold cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={settings.whatsappActive ?? true}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsappActive: e.target.checked,
+                        })
+                      }
+                      className="w-4 h-4 text-emerald-600 rounded"
+                    />
+                    <span>Show WhatsApp Button</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">
+                      WhatsApp Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.whatsappNumber ?? ''}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsappNumber: e.target.value,
+                        })
+                      }
+                      placeholder="+880 1700-000000 or 017XXXXXXXX"
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm font-mono"
+                    />
+                    <p className="text-[11px] text-[#11241c]/50 mt-1">
+                      Works with international or local numbers (e.g. +8801700000000 or 017XXXXXXXX).
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">
+                      Pre-filled Greeting Message
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.whatsappMessage ?? ''}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsappMessage: e.target.value,
+                        })
+                      }
+                      placeholder="Hello Bunon Gents! I would like to inquire about your collection."
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#d7ded8] bg-[#f4f3ee]/50 text-sm"
+                    />
+                    <p className="text-[11px] text-[#11241c]/50 mt-1">
+                      The default message that opens in customer's WhatsApp chat.
+                    </p>
+                  </div>
+                </div>
+
+                {settings.whatsappNumber && (
+                  <div className="pt-1">
+                    <a
+                      href={`https://wa.me/${settings.whatsappNumber.replace(/\D/g, '').replace(/^01/, '8801')}?text=${encodeURIComponent(settings.whatsappMessage || 'Hello Bunon Gents!')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition border border-emerald-200"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Test WhatsApp Link</span>
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Hero & Banner Content */}

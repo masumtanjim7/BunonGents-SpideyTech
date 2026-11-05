@@ -5,6 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import CartDrawer from '@/components/CartDrawer';
 import AuthModal from '@/components/AuthModal';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -41,6 +42,7 @@ export default function RootLayout({
             {children}
             <CartDrawer />
             <AuthModal />
+            <WhatsAppButton />
           </CartProvider>
         </AuthProvider>
       </body>

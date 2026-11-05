@@ -53,6 +53,9 @@ router.put('/', protectAdmin, async (req, res) => {
       'contactEmail',
       'contactPhone',
       'categories',
+      'whatsappNumber',
+      'whatsappActive',
+      'whatsappMessage',
     ];
 
     allowedFields.forEach((field) => {
