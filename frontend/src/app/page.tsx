@@ -82,7 +82,7 @@ const FALLBACK_COLLECTIONS: CollectionItem[] = [
     slug: 'women',
     subtitle: 'SOMETHING BEAUTIFUL IS ON ITS WAY',
     status: 'COMING SOON',
-    image: '',
+    image: 'https://i.ibb.co/GvqmLq5X/a3bea076b84e.avif',
     order: 2,
   },
   {
@@ -606,6 +606,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {collections.map((col, idx) => {
               const isAvailable = col.status === 'AVAILABLE NOW' || idx === 0;
+              const hasImage = Boolean(col.image && col.image.trim());
               return (
                 <div
                   key={col._id || idx}
@@ -619,23 +620,34 @@ export default function HomePage() {
                   className={`group relative h-[360px] sm:h-[390px] rounded-2xl overflow-hidden p-7 flex flex-col justify-between transition-all duration-500 ${
                     isAvailable
                       ? 'bg-[#2a3f36] text-white cursor-pointer shadow-md hover:shadow-xl'
-                      : 'bg-gradient-to-br from-[#dce3dc] via-[#e8ede7] to-[#d5ddd6] text-[#11241c] border border-[#cfd8d0]'
+                      : hasImage
+                      ? 'bg-[#1a3026] text-white cursor-default select-none border border-[#cfd8d0]'
+                      : 'bg-gradient-to-br from-[#dce3dc] via-[#e8ede7] to-[#d5ddd6] text-[#11241c] cursor-default select-none border border-[#cfd8d0]'
                   }`}
                 >
-                  {isAvailable && col.image && (
+                  {hasImage && (
                     <div className="absolute inset-0 z-0">
                       <img
                         src={col.image}
                         alt={col.title}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 opacity-75"
+                        className={`w-full h-full object-cover object-top transition-transform duration-700 ${
+                          isAvailable
+                            ? 'opacity-80 group-hover:scale-105'
+                            : 'opacity-50'
+                        }`}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f221a]/90 via-[#172e24]/45 to-[#172e24]/30" />
+                      {isAvailable ? (
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0f221a]/85 via-[#172e24]/40 to-[#172e24]/20" />
+                      ) : (
+                        /* Stronger, heavier gradient for non-clickable Coming Soon cards (Women & Kids) */
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0c1d15]/95 via-[#152c22]/80 to-[#1b3529]/65 backdrop-blur-[1px]" />
+                      )}
                     </div>
                   )}
 
-                  {!isAvailable && (
+                  {!isAvailable && !hasImage && (
                     <div className="absolute inset-0 z-0 opacity-50 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.8),_transparent_70%)]" />
                   )}
 
@@ -643,7 +655,11 @@ export default function HomePage() {
                   <div className="relative z-10 flex items-center justify-between">
                     <span
                       className={`text-[10px] uppercase tracking-[0.2em] font-semibold ${
-                        isAvailable ? 'text-white/85' : 'text-[#11241c]/60'
+                        isAvailable
+                          ? 'text-white/90'
+                          : hasImage
+                          ? 'text-white/75'
+                          : 'text-[#11241c]/60'
                       }`}
                     >
                       {col.numberLabel}
@@ -654,7 +670,13 @@ export default function HomePage() {
                         <ArrowUpRight className="w-4 h-4" />
                       </span>
                     ) : (
-                      <span className="px-3 py-1 rounded-full bg-white/80 border border-[#c5d0c7] text-[9px] uppercase tracking-[0.18em] font-semibold text-[#11241c]/70">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[9px] uppercase tracking-[0.18em] font-semibold ${
+                          hasImage
+                            ? 'bg-white/90 border border-white/40 text-[#11241c] shadow-xs'
+                            : 'bg-white/80 border border-[#c5d0c7] text-[#11241c]/70'
+                        }`}
+                      >
                         COMING SOON
                       </span>
                     )}
@@ -664,14 +686,22 @@ export default function HomePage() {
                   <div className="relative z-10">
                     <h3
                       className={`font-editorial text-4xl sm:text-5xl mb-2 ${
-                        isAvailable ? 'text-white' : 'text-[#11241c]/85'
+                        isAvailable
+                          ? 'text-white'
+                          : hasImage
+                          ? 'text-white/90'
+                          : 'text-[#11241c]/85'
                       }`}
                     >
                       {col.title}
                     </h3>
                     <p
                       className={`text-[10px] uppercase tracking-[0.2em] font-semibold ${
-                        isAvailable ? 'text-white/85' : 'text-[#11241c]/55'
+                        isAvailable
+                          ? 'text-white/85'
+                          : hasImage
+                          ? 'text-white/70'
+                          : 'text-[#11241c]/55'
                       }`}
                     >
                       {col.subtitle}
