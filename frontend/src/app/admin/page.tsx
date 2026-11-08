@@ -940,6 +940,9 @@ export default function AdminDashboardPage() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        try {
+          localStorage.removeItem('bunon_cache_collections_v1');
+        } catch {}
         setShowColModal(false);
         fetchAllAdminData(token);
         showToast('Collection saved!');
@@ -953,6 +956,9 @@ export default function AdminDashboardPage() {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
+    try {
+      localStorage.removeItem('bunon_cache_collections_v1');
+    } catch {}
     fetchAllAdminData(token);
     showToast('Collection deleted.');
   };
