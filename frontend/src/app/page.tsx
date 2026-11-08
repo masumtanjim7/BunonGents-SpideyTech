@@ -37,9 +37,8 @@ const FALLBACK_SETTINGS: SiteSettings = {
   heroTitleLine1: 'Wear what',
   heroTitleLine2: 'feels like you.',
   heroDescription:
-    "Thoughtful pieces for the moments that make up your life. Discover the men's collection—easy to wear, made to stand out.",
-  heroImage:
-    'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=1800&auto=format&fit=crop',
+    "Thoughtful pieces for the moments that make up your life. Discover the men's collection easy to wear, made to stand out.",
+  heroImage: 'https://i.ibb.co/cSHRwk1Z/dd177591435c.png',
   winterBannerSubtitle: 'THE WINTER COLLECTION',
   winterBannerTitle1: 'Cold weather.',
   winterBannerTitle2: 'Good style.',
@@ -47,36 +46,37 @@ const FALLBACK_SETTINGS: SiteSettings = {
     'Layers that bring warmth and character to every day of the season.',
   winterBannerImage:
     'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1600&auto=format&fit=crop',
-  bkashNumber: '01700-000000',
+  bkashNumber: '01703957213 (Personal)',
   bkashActive: true,
-  nagadNumber: '01800-000000',
+  nagadNumber: '01746495680 (Personal)',
   nagadActive: true,
   codActive: true,
-  paymentInstructions: '',
-  insideDhakaShipping: 70,
+  paymentInstructions:
+    'Send Money to our bKash or Nagad number above, then enter your Sender Mobile Number and Transaction ID (TrxID) below to confirm your order.',
+  insideDhakaShipping: 80,
   outsideDhakaShipping: 130,
-  contactEmail: 'support@example.com',
-  contactPhone: '+880 1700-000000',
-  categories: ['Jeans', 'Shirts', 'T-shirts', 'Sweaters', 'Winter collection'],
-  whatsappNumber: '+880 1700-000000',
+  contactEmail: 'bunongents@gmail.com',
+  contactPhone: '+880 1566093008',
+  categories: ['Jeans', 'Shirts', 'T-shirts', 'Winter collection', 'Panjabi'],
+  whatsappNumber: '+8801566093008',
   whatsappActive: true,
-  whatsappMessage: 'Hello Bunon Gents! I would like to inquire about your collection.',
+  whatsappMessage:
+    'Hello Bunon Gents! I would like to inquire about your collection.',
 };
 
 const FALLBACK_COLLECTIONS: CollectionItem[] = [
   {
-    _id: '1',
+    _id: '6ae5b985461c1a92d56e520c',
     numberLabel: '01 / AVAILABLE NOW',
     title: 'Men',
     slug: 'men',
     subtitle: 'EXPLORE THE COLLECTION →',
     status: 'AVAILABLE NOW',
-    image:
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop',
+    image: 'https://i.ibb.co/CsssH1FY/8f28d3dfdfab.jpg',
     order: 1,
   },
   {
-    _id: '2',
+    _id: '6ae5b985461c1a92d56e520d',
     numberLabel: '02 / IN THE MAKING',
     title: 'Women',
     slug: 'women',
@@ -86,7 +86,7 @@ const FALLBACK_COLLECTIONS: CollectionItem[] = [
     order: 2,
   },
   {
-    _id: '3',
+    _id: '6ae5b985461c1a92d56e520e',
     numberLabel: '03 / IN THE MAKING',
     title: 'Kids',
     slug: 'kids',
@@ -261,6 +261,8 @@ export default function HomePage() {
           <img
             src={settings.heroImage}
             alt="Bunon Gents Hero"
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover object-center opacity-55 scale-105 transition-transform duration-1000"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e2219]/95 via-[#132920]/75 to-[#132920]/30" />

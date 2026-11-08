@@ -36,6 +36,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://i.ibb.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://i.ibb.co" />
+      </head>
       <body className="antialiased selection:bg-[#172e24] selection:text-[#f4f3ee]">
         <AuthProvider>
           <CartProvider>
