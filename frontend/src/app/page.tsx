@@ -134,17 +134,52 @@ export default function HomePage() {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
+    // 1. Instant 0ms hydration from local cache (Stale-While-Revalidate)
+    try {
+      const cachedSettings = localStorage.getItem('bunon_store_settings_v1');
+      if (cachedSettings) {
+        const parsedS = JSON.parse(cachedSettings);
+        if (parsedS && parsedS.siteName) setSettings(parsedS);
+      }
+      const cachedCollections = localStorage.getItem('bunon_store_collections_v1');
+      if (cachedCollections) {
+        const parsedC = JSON.parse(cachedCollections);
+        if (Array.isArray(parsedC) && parsedC.length > 0) setCollections(parsedC);
+      }
+      const cachedProducts = localStorage.getItem('bunon_store_products_v1');
+      if (cachedProducts) {
+        const parsedP = JSON.parse(cachedProducts);
+        if (Array.isArray(parsedP)) {
+          setProducts(
+            parsedP.filter((item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug))
+          );
+          setLoadingProducts(false);
+        }
+      }
+    } catch {}
+
+    // 2. Background revalidation from live API
     fetch(`${API_URL}/settings`)
       .then((res) => (res.ok ? res.json() : null))
       .then((s) => {
-        if (s && s.siteName) setSettings(s);
+        if (s && s.siteName) {
+          setSettings(s);
+          try {
+            localStorage.setItem('bunon_store_settings_v1', JSON.stringify(s));
+          } catch {}
+        }
       })
       .catch(() => {});
 
     fetch(`${API_URL}/collections`)
       .then((res) => (res.ok ? res.json() : null))
       .then((c) => {
-        if (Array.isArray(c) && c.length > 0) setCollections(c);
+        if (Array.isArray(c) && c.length > 0) {
+          setCollections(c);
+          try {
+            localStorage.setItem('bunon_store_collections_v1', JSON.stringify(c));
+          } catch {}
+        }
       })
       .catch(() => {});
 
@@ -152,9 +187,16 @@ export default function HomePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((p) => {
         if (Array.isArray(p)) {
-          setProducts(
-            p.filter((item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug))
+          const cleanProducts = p.filter(
+            (item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug)
           );
+          setProducts(cleanProducts);
+          try {
+            localStorage.setItem(
+              'bunon_store_products_v1',
+              JSON.stringify(cleanProducts)
+            );
+          } catch {}
         }
       })
       .catch(() => {})

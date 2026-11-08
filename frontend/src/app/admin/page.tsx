@@ -304,11 +304,36 @@ export default function AdminDashboardPage() {
             }).catch(() => {});
           });
         }
-        setProducts(rawProds.filter((p) => !demoSlugs.includes(p.slug)));
+        const cleanedProducts = rawProds.filter((p) => !demoSlugs.includes(p.slug));
+        setProducts(cleanedProducts);
+        try {
+          localStorage.setItem(
+            'bunon_store_products_v1',
+            JSON.stringify(cleanedProducts)
+          );
+        } catch {}
       }
-      if (colRes.ok) setCollections(await colRes.json());
+      if (colRes.ok) {
+        const colsData = await colRes.json();
+        setCollections(colsData);
+        try {
+          localStorage.setItem(
+            'bunon_store_collections_v1',
+            JSON.stringify(colsData)
+          );
+        } catch {}
+      }
       if (ordRes.ok) setOrders(await ordRes.json());
-      if (setRes.ok) setSettings(await setRes.json());
+      if (setRes.ok) {
+        const setData = await setRes.json();
+        setSettings(setData);
+        try {
+          localStorage.setItem(
+            'bunon_store_settings_v1',
+            JSON.stringify(setData)
+          );
+        } catch {}
+      }
       if (usrRes.ok) setUsersList(await usrRes.json());
       if (admRes.ok) setAdminsList(await admRes.json());
     } catch (e) {
