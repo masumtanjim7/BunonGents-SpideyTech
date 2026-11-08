@@ -115,6 +115,7 @@ export default function HomePage() {
   const [collections, setCollections] =
     useState<CollectionItem[]>(FALLBACK_COLLECTIONS);
   const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>('All pieces');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [productsPerPage, setProductsPerPage] = useState<number>(4);
@@ -133,35 +134,31 @@ export default function HomePage() {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
-    async function loadStoreData() {
-      try {
-        const [settingsRes, colRes, prodRes] = await Promise.all([
-          fetch(`${API_URL}/settings`),
-          fetch(`${API_URL}/collections`),
-          fetch(`${API_URL}/products`),
-        ]);
+    fetch(`${API_URL}/settings`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((s) => {
+        if (s && s.siteName) setSettings(s);
+      })
+      .catch(() => {});
 
-        if (settingsRes.ok) {
-          const s = await settingsRes.json();
-          if (s && s.siteName) setSettings(s);
+    fetch(`${API_URL}/collections`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((c) => {
+        if (Array.isArray(c) && c.length > 0) setCollections(c);
+      })
+      .catch(() => {});
+
+    fetch(`${API_URL}/products`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((p) => {
+        if (Array.isArray(p)) {
+          setProducts(
+            p.filter((item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug))
+          );
         }
-        if (colRes.ok) {
-          const c = await colRes.json();
-          if (Array.isArray(c) && c.length > 0) setCollections(c);
-        }
-        if (prodRes.ok) {
-          const p = await prodRes.json();
-          if (Array.isArray(p)) {
-            setProducts(
-              p.filter((item: Product) => !DEMO_PRODUCT_SLUGS.includes(item.slug))
-            );
-          }
-        }
-      } catch {
-        // Fallback data already initialized
-      }
-    }
-    loadStoreData();
+      })
+      .catch(() => {})
+      .finally(() => setLoadingProducts(false));
   }, []);
 
   const baseCategories = settings.categories?.length
@@ -586,6 +583,8 @@ export default function HomePage() {
                       <img
                         src={col.image}
                         alt={col.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 opacity-75"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0f221a]/90 via-[#172e24]/45 to-[#172e24]/30" />
@@ -687,7 +686,23 @@ export default function HomePage() {
           </div>
 
           {/* Product Grid (4 columns on desktop matching screenshot) */}
-          {filteredProducts.length === 0 ? (
+          {loadingProducts && products.length === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[0, 1, 2, 3].map((idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#f4f3ee] rounded-2xl p-3 border border-[#dce3de] shadow-xs animate-pulse"
+                >
+                  <div className="h-[300px] sm:h-[310px] rounded-xl bg-[#d6dfd9]" />
+                  <div className="pt-4 pb-1 px-1 space-y-2">
+                    <div className="h-2.5 w-16 rounded bg-[#cdd6d0]" />
+                    <div className="h-5 w-36 rounded bg-[#c2cdc6]" />
+                    <div className="h-4 w-20 rounded bg-[#cdd6d0] mt-2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="rounded-2xl bg-[#f4f3ee] border border-[#dce3de] p-12 text-center">
               <p className="font-editorial text-2xl text-[#11241c] mb-1">
                 No pieces in this collection yet.
@@ -711,15 +726,21 @@ export default function HomePage() {
                     <img
                       src={product.image}
                       alt={product.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
-                    {product.gallery && product.gallery.length > 0 && (
-                      <img
-                        src={product.gallery[0]}
-                        alt={`${product.title} alternate`}
-                        className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      />
-                    )}
+                    {product.gallery &&
+                      product.gallery.length > 0 &&
+                      product.gallery[0] !== product.image && (
+                        <img
+                          src={product.gallery[0]}
+                          alt={`${product.title} alternate`}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        />
+                      )}
                     {product.badge && (
                       <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#f4f3ee]/95 text-[#11241c] text-[9px] font-semibold uppercase tracking-[0.16em] shadow-xs z-10">
                         {product.badge}

@@ -15,19 +15,6 @@ const createSlug = (title) =>
 // GET /api/products
 router.get('/', async (req, res) => {
   try {
-    // Ensure legacy demo products never reappear
-    await Product.deleteMany({
-      slug: {
-        $in: [
-          'everyday-denim',
-          'the-classic-shirt',
-          'relaxed-tee',
-          'weekend-knit',
-          'cold-day-coat',
-        ],
-      },
-    });
-
     const { category, search, featured } = req.query;
     const filter = {};
 
@@ -45,7 +32,7 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const products = await Product.find(filter).sort({ createdAt: 1 });
+    const products = await Product.find(filter).sort({ createdAt: 1 }).lean();
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
